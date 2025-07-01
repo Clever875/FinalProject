@@ -64,13 +64,23 @@ const auth = async (req, res, next) => {
   }
 };
 
-app.get('/api/templates', async (req, res) => {
+app.get('/api/templates/public', async (req, res) => {
   try {
     const templates = await Template.findAll({ where: { isPublic: true } });
     res.json(templates);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Не удалось получить шаблоны' });
+    res.status(500).json({ error: 'Не удалось получить публичные шаблоны' });
+  }
+});
+
+app.get('/api/templates', auth, async (req, res) => {
+  try {
+    const templates = await Template.findAll({ where: { ownerId: req.user.id } });
+    res.json(templates);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Не удалось получить личные шаблоны' });
   }
 });
 app.post('/api/templates', auth, async (req, res) => {
@@ -88,6 +98,25 @@ app.post('/api/templates', auth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: err.message });
+  }
+});
+app.delete('/api/templates/:id', auth, async (req, res) => {
+  try {
+    const template = await Template.findByPk(req.params.id);
+
+    if (!template) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+
+    if (template.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Нет доступа для удаления этого шаблона' });
+    }
+
+    await template.destroy();
+    res.json({ message: 'Шаблон удалён' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Ошибка сервера при удалении' });
   }
 });
 
