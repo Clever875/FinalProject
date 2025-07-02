@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
 const { Template } = require('../models');
+const prisma = new PrismaClient();
 const auth = require('../middleware/auth');
 
 router.get('/public', async (req, res) => {
@@ -15,12 +17,38 @@ router.get('/public', async (req, res) => {
 
 router.use(auth);
 
-router.get('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
+  const {
+    title,
+    description,
+    topic,
+    imageUrl,
+    public: isPublic,
+    tagIds = [],
+  } = req.body;
+
   try {
-    const templates = await Template.findAll({ where: { ownerId: req.user.id } });
-    res.json(templates);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const newTemplate = await prisma.template.create({
+      data: {
+        title,
+        description,
+        topic,
+        imageUrl,
+        public: isPublic || false,
+        authorId: req.user.id,
+        tags: {
+          connect: tagIds.map(id => ({ id })),
+        },
+      },
+      include: {
+        tags: true,
+      },
+    });
+
+    res.status(201).json(newTemplate);
+  } catch (error) {
+    console.error('Ошибка при создании шаблона:', error);
+    res.status(500).json({ error: 'Не удалось создать шаблон' });
   }
 });
 
@@ -38,6 +66,20 @@ router.post('/', async (req, res) => {
     res.status(201).json(template);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+
+router.get('/user', auth, async (req, res) => {
+  try {
+    const templates = await Template.findAll({
+      where: { authorId: req.user.id },
+      order: [['createdAt', 'DESC']],
+    });
+    res.json(templates);
+  } catch (error) {
+    console.error('Error loading user templates:', error);
+    res.status(500).json({ error: 'Failed to load user templates' });
   }
 });
 
