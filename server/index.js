@@ -4,7 +4,7 @@ const adminRoutes = require('./routes/admin');
 const templatesRouter = require('./routes/templates');
 const authRoutes = require('./routes/auth');
 const sequelize = require('./db');
-
+require('dotenv').config();
 const app = express();
 
 app.use(cors());
