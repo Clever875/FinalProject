@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const bcrypt = require('bcryptjs');
+const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 router.post('/register', async (req, res) => {
@@ -17,6 +18,37 @@ router.post('/register', async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+router.delete('/profile', authMiddleware, async (req, res) => {
+  try {
+    await User.destroy({ where: { id: req.user.id } });
+    res.json({ message: 'Аккаунт удалён' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Ошибка удаления аккаунта' });
+  }
+});
+
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const { name, avatar, password } = req.body;
+    const updates = {};
+
+    if (name) updates.name = name;
+    if (avatar) updates.avatar = avatar;
+    if (password) {
+      const hash = await bcrypt.hash(password, 10);
+      updates.password = hash;
+    }
+
+    await User.update(updates, { where: { id: req.user.id } });
+    const updated = await User.findByPk(req.user.id);
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Ошибка обновления профиля' });
   }
 });
 
