@@ -26,6 +26,17 @@ async function checkAccess(templateId, user) {
 
   return { template };
 }
+router.post('/add-question', auth, async (req, res) => {
+    const { templateId, questionData } = req.body;
+    const template = await Template.findById(templateId);
+    if (!template) return res.status(404).send('Template not found');
+
+    const newQuestion = new Question(questionData);
+    template.questions.push(newQuestion);
+    await template.save();
+
+    res.status(200).send(newQuestion);
+});
 
 router.get('/public', async (req, res) => {
   try {
@@ -165,20 +176,23 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID шаблона' });
+router.post('/templates/delete', authenticate, async (req, res) => {
+  const { ids } = req.body;
+  const userId = req.user.id;
+  const isAdmin = req.user.role === 'admin';
 
-  const { template, error } = await checkAccess(id, req.user);
-  if (error) return res.status(403).json({ error });
+  const templates = await Template.findAll({ where: { id: ids } });
 
-  try {
-    await prisma.template.delete({ where: { id: template.id } });
-    res.json({ message: 'Шаблон удалён' });
-  } catch (err) {
-    console.error('Ошибка при удалении шаблона:', err);
-    res.status(500).json({ error: 'Ошибка при удалении шаблона' });
-  }
+  const deletable = templates.filter(
+    (tpl) => tpl.userId === userId || isAdmin
+  );
+
+  const deletableIds = deletable.map((tpl) => tpl.id);
+
+  await Template.destroy({ where: { id: deletableIds } });
+
+  res.json({ success: true, deleted: deletableIds });
 });
+
 
 module.exports = router;

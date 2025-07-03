@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post("/create/:templateId", async (req, res) => {
+router.post("/create/:id", async (req, res) => {
   const userId = req.user.id;
   const templateId = Number(req.params.templateId);
   if (isNaN(templateId)) return res.status(400).json({ error: "Неверный ID шаблона" });
