@@ -9,11 +9,18 @@ router.post('/:templateId', async (req, res) => {
   const templateId = Number(req.params.templateId);
   const userId = req.user.id;
 
+  if (isNaN(templateId)) {
+    return res.status(400).json({ error: 'Неверный ID шаблона' });
+  }
+
   try {
     const template = await prisma.template.findUnique({
       where: { id: templateId }
     });
-    if (!template) return res.status(404).json({ error: 'Шаблон не найден' });
+
+    if (!template) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
 
     const existingLike = await prisma.like.findFirst({
       where: {
@@ -22,28 +29,42 @@ router.post('/:templateId', async (req, res) => {
       }
     });
 
+    let result;
     if (existingLike) {
-      await prisma.like.delete({
+      result = await prisma.like.delete({
         where: { id: existingLike.id }
       });
-      return res.json({ liked: false });
     } else {
-      await prisma.like.create({
+      result = await prisma.like.create({
         data: {
           templateId,
           userId
+        },
+        include: {
+          template: { select: { title: true } },
+          user: { select: { username: true } }
         }
       });
-      return res.json({ liked: true });
     }
+    const count = await prisma.like.count({
+      where: { templateId }
+    });
+
+    res.json({
+      liked: !existingLike,
+      count
+    });
   } catch (err) {
     console.error('Ошибка при обработке лайка:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
-
 router.get('/:templateId/count', async (req, res) => {
   const templateId = Number(req.params.templateId);
+
+  if (isNaN(templateId)) {
+    return res.status(400).json({ error: 'Неверный ID шаблона' });
+  }
 
   try {
     const count = await prisma.like.count({
@@ -55,10 +76,13 @@ router.get('/:templateId/count', async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
-
-router.get('/:templateId/status', auth, async (req, res) => {
+router.get('/:templateId/status', async (req, res) => {
   const templateId = Number(req.params.templateId);
   const userId = req.user.id;
+
+  if (isNaN(templateId)) {
+    return res.status(400).json({ error: 'Неверный ID шаблона' });
+  }
 
   try {
     const like = await prisma.like.findFirst({
