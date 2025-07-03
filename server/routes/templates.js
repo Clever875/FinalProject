@@ -1,30 +1,39 @@
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
-const { Template } = require('../models');
 const prisma = new PrismaClient();
 const auth = require('../middleware/auth');
 
 router.get('/public', async (req, res) => {
   try {
-    const templates = await Template.findAll({ where: { isPublic: true } });
+    const templates = await prisma.template.findMany({
+      where: { isPublic: true },
+      include: {
+        createdBy: true,
+        templateTags: {
+          include: { tag: true },
+        },
+      },
+    });
     res.json(templates);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Ошибка запроса' });
+    console.error('🔥 Ошибка в /templates/public:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+
 router.use(auth);
 
-router.post('/', auth, async (req, res) => {
+router.post('/', async (req, res) => {
   const {
     title,
     description,
-    topic,
+    theme,
     imageUrl,
-    public: isPublic,
-    tagIds = [],
+    isPublic = false,
+    tags = [],
+    questions = []
   } = req.body;
 
   try {
@@ -32,17 +41,33 @@ router.post('/', auth, async (req, res) => {
       data: {
         title,
         description,
-        topic,
+        theme,
         imageUrl,
-        public: isPublic || false,
-        authorId: req.user.id,
-        tags: {
-          connect: tagIds.map(id => ({ id })),
+        isPublic,
+        createdBy: { connect: { id: req.user.id } },
+        templateTags: {
+          create: tags.map(tagId => ({
+            tag: { connect: { id: tagId } }
+          }))
         },
+        questions: {
+          create: questions.map((q, index) => ({
+            text: q.text,
+            type: q.type,
+            order: index,
+            displayInTable: q.displayInTable || false,
+            isRequired: q.isRequired !== false,
+            options: {
+              create: (q.options || []).map(opt => ({ value: opt }))
+            }
+          }))
+        }
       },
       include: {
-        tags: true,
-      },
+        questions: { include: { options: true } },
+        createdBy: true,
+        templateTags: { include: { tag: true } }
+      }
     });
 
     res.status(201).json(newTemplate);
@@ -52,42 +77,36 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.get('/user', async (req, res) => {
   try {
-    const { title, description, topic, imageUrl, isPublic } = req.body;
-    const template = await Template.create({
-      title,
-      description,
-      topic,
-      imageUrl,
-      isPublic,
-      ownerId: req.user.id
-    });
-    res.status(201).json(template);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-router.get('/user', auth, async (req, res) => {
-  try {
-    const templates = await Template.findAll({
-      where: { authorId: req.user.id },
-      order: [['createdAt', 'DESC']],
+    const templates = await prisma.template.findMany({
+      where: { createdById: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      include: { tags: true, questions: true },
     });
     res.json(templates);
   } catch (error) {
-    console.error('Error loading user templates:', error);
-    res.status(500).json({ error: 'Failed to load user templates' });
+    console.error('Ошибка при загрузке шаблонов:', error);
+    res.status(500).json({ error: 'Ошибка загрузки' });
   }
 });
 
 router.get('/:id', async (req, res) => {
   try {
-    const template = await Template.findByPk(req.params.id);
-    if (!template) return res.status(404).json({ error: 'Template not found' });
-    if (template.ownerId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
+    const template = await prisma.template.findUnique({
+      where: { id: req.params.id },
+      include: {
+        questions: { include: { options: true } },
+        templateTags: { include: { tag: true } }
+      }
+    });
+
+    if (!template) return res.status(404).json({ error: 'Шаблон не найден' });
+
+    const isOwner = template.createdById === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет доступа' });
+
     res.json(template);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -95,27 +114,85 @@ router.get('/:id', async (req, res) => {
 });
 
 router.put('/:id', async (req, res) => {
-  try {
-    const template = await Template.findByPk(req.params.id);
-    if (!template) return res.status(404).json({ error: 'Template not found' });
-    if (template.ownerId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
+  const {
+    title,
+    description,
+    theme,
+    imageUrl,
+    isPublic,
+    tags = [],
+    questions = []
+  } = req.body;
 
-    const { title, description, topic, imageUrl, isPublic } = req.body;
-    await template.update({ title, description, topic, imageUrl, isPublic });
-    res.json(template);
+  try {
+    const existing = await prisma.template.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!existing) return res.status(404).json({ error: 'Шаблон не найден' });
+
+    const isOwner = existing.createdById === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет доступа' });
+
+    await prisma.question.deleteMany({ where: { templateId: req.params.id } });
+    await prisma.templateTag.deleteMany({ where: { templateId: req.params.id } });
+
+    const updated = await prisma.template.update({
+      where: { id: req.params.id },
+      data: {
+        title,
+        description,
+        theme,
+        imageUrl,
+        isPublic,
+        templateTags: {
+          create: tags.map(tagId => ({
+            tag: { connect: { id: tagId } }
+          }))
+        },
+        questions: {
+          create: questions.map((q, index) => ({
+            text: q.text,
+            type: q.type,
+            order: index,
+            displayInTable: q.displayInTable || false,
+            isRequired: q.isRequired !== false,
+            options: {
+              create: (q.options || []).map(opt => ({ value: opt }))
+            }
+          }))
+        }
+      },
+      include: {
+        questions: { include: { options: true } },
+        templateTags: { include: { tag: true } }
+      }
+    });
+
+    res.json(updated);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Ошибка при обновлении шаблона:', err);
+    res.status(500).json({ error: 'Не удалось обновить шаблон' });
   }
 });
-
 router.delete('/:id', async (req, res) => {
   try {
-    const template = await Template.findByPk(req.params.id);
-    if (!template) return res.status(404).json({ error: 'Template not found' });
-    if (template.ownerId !== req.user.id) return res.status(403).json({ error: 'Access denied' });
+    const template = await prisma.template.findUnique({
+      where: { id: req.params.id },
+    });
 
-    await template.destroy();
-    res.json({ message: 'Template deleted' });
+    if (!template) return res.status(404).json({ error: 'Шаблон не найден' });
+
+    const isOwner = template.createdById === req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет доступа' });
+
+    await prisma.template.delete({
+      where: { id: req.params.id },
+    });
+
+    res.json({ message: 'Шаблон удалён' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
