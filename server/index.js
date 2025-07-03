@@ -44,7 +44,7 @@ io.on('connection', (socket) => {
         data: {
           text: data.text,
           templateId: data.template_id,
-          userId: data.user_id
+          authorId: data.user_id
         }
       });
       io.emit('updateComments', newComment);
