@@ -4,37 +4,44 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const auth = require('../middleware/auth');
 
+const fullTemplateInclude = {
+  createdBy: true,
+  questions: { include: { options: true } },
+  templateTags: { include: { tag: true } },
+};
+
+router.use(auth);
+
+async function checkAccess(templateId, user) {
+  const id = Number(templateId);
+  if (isNaN(id)) return { error: 'Неверный ID шаблона' };
+
+  const template = await prisma.template.findUnique({ where: { id } });
+  if (!template) return { error: 'Шаблон не найден' };
+
+  const isOwner = template.ownerId === user.id;
+  const isAdmin = user.role === 'ADMIN';
+
+  if (!isOwner && !isAdmin) return { error: 'Нет доступа' };
+
+  return { template };
+}
+
 router.get('/public', async (req, res) => {
   try {
     const templates = await prisma.template.findMany({
       where: { isPublic: true },
-      include: {
-        createdBy: true,
-        templateTags: {
-          include: { tag: true },
-        },
-      },
+      include: fullTemplateInclude,
     });
     res.json(templates);
   } catch (err) {
-    console.error('🔥 Ошибка в /templates/public:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('🔥 Ошибка /templates/public:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
-
-
 router.use(auth);
-
 router.post('/', async (req, res) => {
-  const {
-    title,
-    description,
-    theme,
-    imageUrl,
-    isPublic = false,
-    tags = [],
-    questions = []
-  } = req.body;
+  const { title, description, theme, imageUrl, isPublic = false, tags = [], questions = [] } = req.body;
 
   try {
     const newTemplate = await prisma.template.create({
@@ -44,102 +51,86 @@ router.post('/', async (req, res) => {
         theme,
         imageUrl,
         isPublic,
-        createdBy: { connect: { id: req.user.id } },
+        ownerId: req.user.id,
         templateTags: {
           create: tags.map(tagId => ({
             tag: { connect: { id: tagId } }
           }))
         },
         questions: {
-          create: questions.map((q, index) => ({
-            text: q.text,
+          create: questions.map((q, i) => ({
+            title: q.text || q.title,
             type: q.type,
-            order: index,
+            order: i,
             displayInTable: q.displayInTable || false,
             isRequired: q.isRequired !== false,
             options: {
-              create: (q.options || []).map(opt => ({ value: opt }))
+              create: (q.options || []).map(value => ({ value }))
             }
           }))
         }
       },
-      include: {
-        questions: { include: { options: true } },
-        createdBy: true,
-        templateTags: { include: { tag: true } }
-      }
+      include: fullTemplateInclude
     });
 
     res.status(201).json(newTemplate);
-  } catch (error) {
-    console.error('Ошибка при создании шаблона:', error);
-    res.status(500).json({ error: 'Не удалось создать шаблон' });
+  } catch (err) {
+    console.error('❌ Ошибка создания шаблона:', err);
+    res.status(500).json({ error: 'Ошибка при создании шаблона' });
   }
 });
 
 router.get('/user', async (req, res) => {
   try {
     const templates = await prisma.template.findMany({
-      where: { createdById: req.user.id },
+      where: { ownerId: req.user.id },
       orderBy: { createdAt: 'desc' },
-      include: { tags: true, questions: true },
+      include: fullTemplateInclude
     });
     res.json(templates);
-  } catch (error) {
-    console.error('Ошибка при загрузке шаблонов:', error);
-    res.status(500).json({ error: 'Ошибка загрузки' });
+  } catch (err) {
+    console.error('Ошибка загрузки шаблонов:', err);
+    res.status(500).json({ error: 'Ошибка загрузки шаблонов' });
   }
 });
 
 router.get('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID шаблона' });
+
+  const { template, error } = await checkAccess(id, req.user);
+  if (error) return res.status(403).json({ error });
+
   try {
-    const template = await prisma.template.findUnique({
-      where: { id: req.params.id },
-      include: {
-        questions: { include: { options: true } },
-        templateTags: { include: { tag: true } }
-      }
+    const fullTemplate = await prisma.template.findUnique({
+      where: { id },
+      include: fullTemplateInclude
     });
 
-    if (!template) return res.status(404).json({ error: 'Шаблон не найден' });
+    if (!fullTemplate) return res.status(404).json({ error: 'Шаблон не найден' });
 
-    const isOwner = template.createdById === req.user.id;
-    const isAdmin = req.user.role === 'ADMIN';
-    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет доступа' });
-
-    res.json(template);
+    res.json(fullTemplate);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Ошибка загрузки шаблона:', err);
+    res.status(500).json({ error: 'Ошибка загрузки шаблона' });
   }
 });
 
 router.put('/:id', async (req, res) => {
-  const {
-    title,
-    description,
-    theme,
-    imageUrl,
-    isPublic,
-    tags = [],
-    questions = []
-  } = req.body;
+  const id = Number(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID шаблона' });
+
+  const { title, description, theme, imageUrl, isPublic, tags = [], questions = [] } = req.body;
+
+  const { template, error } = await checkAccess(id, req.user);
+  if (error) return res.status(403).json({ error });
 
   try {
-    const existing = await prisma.template.findUnique({
-      where: { id: req.params.id }
-    });
-
-    if (!existing) return res.status(404).json({ error: 'Шаблон не найден' });
-
-    const isOwner = existing.createdById === req.user.id;
-    const isAdmin = req.user.role === 'ADMIN';
-    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет доступа' });
-
-    await prisma.question.deleteMany({ where: { templateId: req.params.id } });
-    await prisma.templateTag.deleteMany({ where: { templateId: req.params.id } });
+    await prisma.question.deleteMany({ where: { templateId: template.id } });
+    await prisma.templateTag.deleteMany({ where: { templateId: template.id } });
 
     const updated = await prisma.template.update({
-      where: { id: req.params.id },
+      where: { id: template.id },
       data: {
         title,
         description,
@@ -152,49 +143,41 @@ router.put('/:id', async (req, res) => {
           }))
         },
         questions: {
-          create: questions.map((q, index) => ({
-            text: q.text,
+          create: questions.map((q, i) => ({
+            title: q.text || q.title,
             type: q.type,
-            order: index,
+            order: i,
             displayInTable: q.displayInTable || false,
             isRequired: q.isRequired !== false,
             options: {
-              create: (q.options || []).map(opt => ({ value: opt }))
+              create: (q.options || []).map(value => ({ value }))
             }
           }))
         }
       },
-      include: {
-        questions: { include: { options: true } },
-        templateTags: { include: { tag: true } }
-      }
+      include: fullTemplateInclude
     });
 
     res.json(updated);
   } catch (err) {
-    console.error('Ошибка при обновлении шаблона:', err);
-    res.status(500).json({ error: 'Не удалось обновить шаблон' });
+    console.error('Ошибка обновления шаблона:', err);
+    res.status(500).json({ error: 'Ошибка при обновлении шаблона' });
   }
 });
+
 router.delete('/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID шаблона' });
+
+  const { template, error } = await checkAccess(id, req.user);
+  if (error) return res.status(403).json({ error });
+
   try {
-    const template = await prisma.template.findUnique({
-      where: { id: req.params.id },
-    });
-
-    if (!template) return res.status(404).json({ error: 'Шаблон не найден' });
-
-    const isOwner = template.createdById === req.user.id;
-    const isAdmin = req.user.role === 'ADMIN';
-    if (!isOwner && !isAdmin) return res.status(403).json({ error: 'Нет доступа' });
-
-    await prisma.template.delete({
-      where: { id: req.params.id },
-    });
-
+    await prisma.template.delete({ where: { id: template.id } });
     res.json({ message: 'Шаблон удалён' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Ошибка при удалении шаблона:', err);
+    res.status(500).json({ error: 'Ошибка при удалении шаблона' });
   }
 });
 

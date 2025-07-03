@@ -4,12 +4,14 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const requireAuth = require("../middleware/auth");
 
-router.get("/:id", requireAuth, async (req, res) => {
+router.use(requireAuth);
+
+router.get("/:id", async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
     const form = await prisma.form.findUnique({
-      where: { id },
+      where: { id: Number(id) },
       include: {
         template: { select: { title: true, description: true } },
         answers: {
@@ -31,7 +33,8 @@ router.get("/:id", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch form" });
   }
 });
-router.get('/', requireAuth, async (req, res) => {
+
+router.get('/', async (req, res) => {
   const userId = req.user.id;
 
   try {
@@ -55,14 +58,39 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-router.put('/:id', requireAuth, async (req, res) => {
+router.post("/create/:templateId", async (req, res) => {
+  const userId = req.user.id;
+  const templateId = Number(req.params.templateId);
+  if (isNaN(templateId)) return res.status(400).json({ error: "Неверный ID шаблона" });
+
+  try {
+    const template = await prisma.template.findUnique({ where: { id: templateId } });
+    if (!template) return res.status(404).json({ error: "Шаблон не найден" });
+
+    const form = await prisma.form.create({
+      data: {
+        authorId: userId,
+        templateId,
+        answers: { create: [] }
+      },
+      include: { answers: true }
+    });
+
+    res.status(201).json(form);
+  } catch (error) {
+    console.error("Ошибка при создании формы:", error);
+    res.status(500).json({ error: "Не удалось создать форму" });
+  }
+});
+
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { answers } = req.body;
   const userId = req.user.id;
 
   try {
     const form = await prisma.form.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: Number(id) },
       include: { answers: true }
     });
 
@@ -77,6 +105,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     await prisma.answer.deleteMany({
       where: { formId: form.id }
     });
+
     const updatedForm = await prisma.form.update({
       where: { id: form.id },
       data: {
@@ -96,12 +125,13 @@ router.put('/:id', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Не удалось обновить форму' });
   }
 });
-router.delete('/:id', requireAuth, async (req, res) => {
+
+router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
     const form = await prisma.form.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: Number(id) },
     });
     if (!form) return res.status(404).json({ error: 'Форма не найдена' });
     const isAdmin = req.user.role === 'ADMIN';
@@ -120,29 +150,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Ошибка при удалении формы:', error);
     res.status(500).json({ error: 'Не удалось удалить форму' });
-}});
-router.post("/", requireAuth, async (req, res) => {
-  const { templateId, answers } = req.body;
-  const userId = req.user.id;
-
-  try {
-    const form = await prisma.form.create({
-      data: {
-        authorId: userId,
-        templateId: templateId,
-        answers: {
-          create: answers.map(a => ({
-            questionId: a.questionId,
-            value: a.value
-          }))
-        }
-      },
-      include: { answers: true }
-    });
-    res.status(201).json(form);
-  } catch (error) {
-    console.error('Ошибка при удалении формы:', error);
-    res.status(500).json({ error: 'Не удалось удалить форму' });
   }
 });
+
 module.exports = router;

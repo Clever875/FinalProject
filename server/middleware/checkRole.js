@@ -1,5 +1,5 @@
-module.exports = roles => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
+module.exports = (allowedRoles) => (req, res, next) => {
+  if (!allowedRoles.includes(req.user.role)) {
     return res.status(403).json({ error: 'Недостаточно прав' });
   }
   next();

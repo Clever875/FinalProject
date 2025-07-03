@@ -1,15 +1,19 @@
 const express = require('express');
-const { User } = require('../models');
+const { PrismaClient } = require('@prisma/client');
 const auth = require('../middleware/auth');
 const checkRole = require('../middleware/checkRole');
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 router.get('/users', auth, checkRole(['admin']), async (req, res) => {
   try {
-    const users = await User.findAll({ attributes: ['id', 'name', 'email', 'role'] });
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true },
+    });
     res.json(users);
   } catch (err) {
+    console.error('Ошибка сервера:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
@@ -24,14 +28,18 @@ router.put('/users/:id/role', auth, checkRole(['admin']), async (req, res) => {
   }
 
   try {
-    const user = await User.findByPk(id);
+    const userId = parseInt(id, 10);
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    user.role = newRole;
-    await user.save();
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole },
+    });
 
     res.json({ message: 'Роль обновлена' });
   } catch (err) {
+    console.error('Ошибка сервера:', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
