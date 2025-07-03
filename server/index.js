@@ -7,6 +7,7 @@ const adminRoutes = require('./routes/admin');
 const templatesRouter = require('./routes/templates');
 const authRoutes = require('./routes/auth');
 const formRoutes = require('./routes/forms');
+const likesRouter = require('./routes/likes');
 require('dotenv').config();
 
 const { PrismaClient } = require('@prisma/client');
@@ -22,6 +23,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/templates', templatesRouter);
 app.use('/api/forms', formRoutes);
+app.use('/api/likes', likesRouter);
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
