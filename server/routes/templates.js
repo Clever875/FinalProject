@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const auth = require('../middleware/auth');
-const checkRole = require('../middleware/checkRole');
 
 const fullTemplateInclude = {
   owner: {
@@ -82,6 +82,7 @@ router.post('/', async (req, res) => {
     questions = [],
     allowedUsers = []
   } = req.body;
+
   if (!title || title.trim().length < 3) {
     return res.status(400).json({ error: 'Название должно содержать не менее 3 символов' });
   }
@@ -190,6 +191,7 @@ router.get('/public', async (req, res) => {
   }
 });
 
+
 router.get('/user', async (req, res) => {
   const { page = 1, limit = 10, search = '' } = req.query;
   const pageInt = parseInt(page);
@@ -230,6 +232,7 @@ router.get('/user', async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
+
 router.get('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID шаблона' });
@@ -251,6 +254,7 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
+
 router.put('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) return res.status(400).json({ error: 'Неверный ID шаблона' });
@@ -269,6 +273,7 @@ router.put('/:id', async (req, res) => {
   try {
     const { template, error, status } = await checkAccess(id, req.user);
     if (error) return res.status(status).json({ error });
+
     const tagOperations = tags.map(tagName => {
       return prisma.tag.upsert({
         where: { name: tagName },
@@ -352,7 +357,7 @@ router.delete('/', async (req, res) => {
       prisma.form.deleteMany({ where: { templateId: { in: deletableIds } } }),
       prisma.templateTag.deleteMany({ where: { templateId: { in: deletableIds } } }),
       prisma.question.deleteMany({ where: { templateId: { in: deletableIds } } }),
-      prisma.template.deleteMany({ where: { id: { in: deletableIds } })
+      prisma.template.deleteMany({ where: { id: { in: deletableIds } } })
     ]);
 
     const tagsToUpdate = await prisma.tag.findMany({
@@ -427,4 +432,4 @@ router.post('/:id/questions', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

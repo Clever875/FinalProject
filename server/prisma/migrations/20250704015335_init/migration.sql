@@ -8,6 +8,8 @@ CREATE TABLE `User` (
     `avatar` VARCHAR(191) NULL,
     `language` VARCHAR(191) NULL,
     `theme` VARCHAR(191) NULL,
+    `isBlocked` BOOLEAN NULL DEFAULT false,
+    `lastActive` DATETIME(3) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -54,6 +56,7 @@ CREATE TABLE `Form` (
     `authorId` INTEGER NOT NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
+    `completed` BOOLEAN NULL DEFAULT false,
 
     INDEX `Form_templateId_idx`(`templateId`),
     INDEX `Form_authorId_idx`(`authorId`),

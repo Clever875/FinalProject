@@ -1,12 +1,12 @@
-const express = require("express");
-const { PrismaClient } = require("@prisma/client");
-const auth = require("../middleware/auth");
-const checkRole = require("../middleware/checkRole");
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import auth from '../middleware/auth.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
 router.use(auth);
+
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
@@ -21,7 +21,9 @@ router.get("/:id", async (req, res) => {
             description: true,
             ownerId: true,
             isPublic: true,
-            allowedUsers: true
+            allowedUsers: {
+              select: { id: true }
+            }
           }
         },
         answers: {
@@ -47,7 +49,7 @@ router.get("/:id", async (req, res) => {
     const isOwner = form.authorId === userId;
     const isTemplateOwner = form.template.ownerId === userId;
     const isAllowed = form.template.isPublic ||
-                     form.template.allowedUsers.includes(userId);
+                     form.template.allowedUsers.some(user => user.id === userId);
 
     if (!isOwner && !isAdmin && !isTemplateOwner && !isAllowed) {
       return res.status(403).json({ error: "Доступ запрещён" });
@@ -126,7 +128,9 @@ router.post("/create/:templateId", async (req, res) => {
       select: {
         id: true,
         isPublic: true,
-        allowedUsers: true,
+        allowedUsers: {
+          select: { id: true }
+        },
         ownerId: true
       }
     });
@@ -135,9 +139,7 @@ router.post("/create/:templateId", async (req, res) => {
       return res.status(404).json({ error: "Шаблон не найден" });
     }
 
-    const isAllowed = template.isPublic ||
-                      template.allowedUsers.includes(userId) ||
-                      template.ownerId === userId;
+    const isAllowed = form.template.isPublic || form.template.allowedUsers.some(user => user.id === userId) || form.template.ownerId === userId;
 
     if (!isAllowed) {
       return res.status(403).json({ error: "Нет доступа к этому шаблону" });
@@ -209,7 +211,7 @@ router.put('/:id', async (req, res) => {
         .map(q => q.id);
 
       const unanswered = requiredQuestions.filter(qId =>
-        !answers.some(a => a.questionId === qId && a.value !== '')
+        !answers.some(a => a.questionId === qId && a.value.trim() !== '')
       );
 
       if (unanswered.length > 0) {
@@ -291,4 +293,4 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

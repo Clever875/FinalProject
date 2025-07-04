@@ -1,4 +1,4 @@
-module.exports = (allowedRoles) => {
+export default (allowedRoles) => {
   if (!Array.isArray(allowedRoles)) {
     throw new Error('Параметр allowedRoles должен быть массивом');
   }
@@ -11,14 +11,18 @@ module.exports = (allowedRoles) => {
       if (req.user.isBlocked) {
         return res.status(403).json({ error: 'Учетная запись заблокирована' });
       }
-      const hasRole = allowedRoles.includes(req.user.role);
-      const isSelfAction = req.params.userId === req.user.id;
-      const isAdminAction = allowedRoles.includes('ADMIN') && req.user.role === 'ADMIN';
-      if (!hasRole && !(isAdminAction && isSelfAction)) {
+
+      const hasRequiredRole = allowedRoles.includes(req.user.role);
+
+      const isSelfAction = req.params.userId && req.params.userId === req.user.id;
+      const isAdminAction = allowedRoles.includes('ADMIN') && req.user.role === 'ADMIN' && isSelfAction;
+
+      if (!hasRequiredRole && !isAdminAction) {
         console.warn(`Попытка несанкционированного доступа:
           Пользователь: ${req.user.email} (${req.user.role})
           Требуемые роли: ${allowedRoles.join(', ')}
-          Путь: ${req.originalUrl}`);
+          Путь: ${req.originalUrl}
+          Метод: ${req.method}`);
 
         return res.status(403).json({
           error: 'Недостаточно прав',
@@ -26,6 +30,7 @@ module.exports = (allowedRoles) => {
           yourRole: req.user.role
         });
       }
+
       if (req.method !== 'GET') {
         const lastActive = new Date(req.user.lastActive);
         const now = new Date();
@@ -34,7 +39,8 @@ module.exports = (allowedRoles) => {
         if (diffHours > 24) {
           return res.status(403).json({
             error: 'Требуется повторная аутентификация',
-            reason: 'Сессия устарела'
+            reason: 'Сессия устарела',
+            lastActive: req.user.lastActive
           });
         }
       }
@@ -42,7 +48,10 @@ module.exports = (allowedRoles) => {
       next();
     } catch (error) {
       console.error('Ошибка проверки прав доступа:', error);
-      res.status(500).json({ error: 'Ошибка проверки прав доступа' });
+      res.status(500).json({
+        error: 'Ошибка проверки прав доступа',
+        details: error.message
+      });
     }
   };
 };

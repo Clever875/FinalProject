@@ -1,15 +1,45 @@
-const express = require('express');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
-const authMiddleware = require('../middleware/auth');
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { PrismaClient } from '@prisma/client';
+import authMiddleware from '../middleware/auth.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+router.post('/refresh', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Token required' });
+  }
 
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+    const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const newToken = jwt.sign(
+      {
+        id: user.id,
+        role: user.role,
+        iss: process.env.JWT_ISSUER,
+        aud: process.env.JWT_AUDIENCE,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+    );
+
+    res.json({ token: newToken });
+  } catch (err) {
+    console.error('Token refresh error:', err);
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -41,16 +71,14 @@ router.post('/register', async (req, res) => {
       },
     });
 
-    const token = jwt.sign(
-      {
-        id: newUser.id,
-        role: newUser.role,
-        iss: process.env.JWT_ISSUER,
-        aud: process.env.JWT_AUDIENCE,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
-    );
+    const token = jwt.sign({
+      id: user.id,
+      role: user.role,
+      iss: process.env.JWT_ISSUER || 'FormBuilder',
+      aud: process.env.JWT_AUDIENCE || 'client',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 час
+    }, process.env.JWT_SECRET);
 
     res.status(201).json({
       token,
@@ -208,4 +236,4 @@ router.delete('/profile', authMiddleware, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

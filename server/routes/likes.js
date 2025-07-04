@@ -1,10 +1,12 @@
-const express = require('express');
+import express from 'express';
+import { PrismaClient } from '@prisma/client';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const auth = require('../middleware/auth');
 
 router.use(auth);
+
 router.post('/:templateId', async (req, res) => {
   const templateId = Number(req.params.templateId);
   const userId = req.user.id;
@@ -46,6 +48,7 @@ router.post('/:templateId', async (req, res) => {
         }
       });
     }
+
     const count = await prisma.like.count({
       where: { templateId }
     });
@@ -59,6 +62,7 @@ router.post('/:templateId', async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
+
 router.get('/:templateId/count', async (req, res) => {
   const templateId = Number(req.params.templateId);
 
@@ -76,6 +80,7 @@ router.get('/:templateId/count', async (req, res) => {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
+
 router.get('/:templateId/status', async (req, res) => {
   const templateId = Number(req.params.templateId);
   const userId = req.user.id;
@@ -98,4 +103,4 @@ router.get('/:templateId/status', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

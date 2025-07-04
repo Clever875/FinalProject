@@ -1,22 +1,23 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
-const { Server } = require('socket.io');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const { PrismaClient } = require('@prisma/client');
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import http from 'http';
+import { Server } from 'socket.io';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { PrismaClient } from '@prisma/client';
+
+import adminRoutes from './routes/admin.js';
+import templatesRouter from './routes/templates.js';
+import authRoutes from './routes/auth.js';
+import formRoutes from './routes/forms.js';
+import likesRouter from './routes/likes.js';
+import commentsRoutes from './routes/comments.js';
+import analyticsRoutes from './routes/analytics.js';
+import tagsRoutes from './routes/tags.js';
+
+dotenv.config();
 const prisma = new PrismaClient();
-
-const adminRoutes = require('./routes/admin');
-const templatesRouter = require('./routes/templates');
-const authRoutes = require('./routes/auth');
-const formRoutes = require('./routes/forms');
-const likesRouter = require('./routes/likes');
-const commentsRoutes = require('./routes/comments');
-const analyticsRoutes = require('./routes/analytics');
-const tagsRoutes = require('./routes/tags');
-
 const app = express();
 
 app.use(helmet());
@@ -30,7 +31,6 @@ const limiter = rateLimit({
   max: 100
 });
 app.use(limiter);
-
 app.use(express.json());
 
 app.use('/api/tags', tagsRoutes);
@@ -59,6 +59,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
+// Настройка сервера и WebSocket
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
@@ -77,12 +78,15 @@ async function start() {
   try {
     await prisma.$connect();
     console.log('Database connected');
+
     io.on('connection', (socket) => {
       console.log('New client connected');
+
       socket.on('subscribeToTemplate', (templateId) => {
         socket.join(`template_${templateId}`);
         console.log(`Client subscribed to template ${templateId}`);
       });
+
       socket.on('newComment', async (data) => {
         try {
           const newComment = await prisma.comment.create({
@@ -155,20 +159,14 @@ async function start() {
   }
 }
 
+const shutdown = async () => {
+  await prisma.$disconnect();
+  server.close(() => {
+    console.log('Server stopped');
+    process.exit(0);
+  });
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 start();
-
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  server.close(() => {
-    console.log('Server stopped');
-    process.exit(0);
-  });
-});
-
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  server.close(() => {
-    console.log('Server stopped');
-    process.exit(0);
-  });
-});
