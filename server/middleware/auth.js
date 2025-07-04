@@ -17,7 +17,7 @@ export default async function authenticate(req, res, next) {
   if (!token || token.split('.').length !== 3) {
     return res.status(401).json({ error: 'Invalid token format' });
   }
-  const token = tokenParts[1];
+  token = tokenParts[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
