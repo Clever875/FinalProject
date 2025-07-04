@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 export default async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
+
   if (!authHeader) {
     return res.status(401).json({ error: 'Требуется аутентификация' });
   }
@@ -13,11 +14,12 @@ export default async function authenticate(req, res, next) {
   if (tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
     return res.status(401).json({ error: 'Неверный формат токена' });
   }
-  const token = req.header('Authorization')?.replace('Bearer ', '');
+
+  const token = tokenParts[1];
+
   if (!token || token.split('.').length !== 3) {
-    return res.status(401).json({ error: 'Invalid token format' });
+    return res.status(401).json({ error: 'Неверный формат токена' });
   }
-  token = tokenParts[1];
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
