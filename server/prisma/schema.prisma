@@ -50,7 +50,7 @@ model Template {
   questions    Question[]
   templateTags TemplateTag[]
 
-  @@index([ownerId], map: "Template_ownerId_fkey")
+  @@index([ownerId], map: "idx_template_owner_id")
 }
 
 
