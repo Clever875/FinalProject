@@ -1,3 +1,4 @@
+import { Alert } from 'antd';
 import React, { useState, useEffect, useContext } from 'react';
 import {
   Card,
@@ -13,36 +14,48 @@ import {
   message,
   Badge,
   Tooltip,
-  Divider
+  Divider,
+  Tag,
+  Descriptions
 } from 'antd';
 import {
   EditOutlined,
   SaveOutlined,
   CloseOutlined,
   UserOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  MailOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../AuthContext';
 import { formsApi } from '../api';
 import moment from 'moment';
+import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import './css/FormPages.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 export default function FormPage() {
+  const { t } = useTranslation();
+  const { darkMode } = useTheme();
+  const { user } = useContext(AuthContext);
   const { formId } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+
   const [form, setForm] = useState(null);
+  const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [answers, setAnswers] = useState({});
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchForm = async () => {
       try {
         setLoading(true);
+        setError(null);
+
         const data = await formsApi.getFormById(formId);
         setForm(data);
 
@@ -53,14 +66,14 @@ export default function FormPage() {
         setAnswers(initialAnswers);
       } catch (err) {
         console.error('Ошибка загрузки формы:', err);
-        message.error('Не удалось загрузить форму');
+        setError(t('form.loadError'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchForm();
-  }, [formId]);
+  }, [formId, t]);
 
   const canEdit = () => {
     if (!user) return false;
@@ -79,14 +92,15 @@ export default function FormPage() {
       }));
 
       await formsApi.updateFormAnswers(formId, answersArray);
-      message.success('Ответы успешно обновлены!');
+      message.success(t('form.updateSuccess'));
       setEditing(false);
 
+      // Обновляем данные формы
       const updatedForm = await formsApi.getFormById(formId);
       setForm(updatedForm);
     } catch (err) {
       console.error('Ошибка при сохранении ответов:', err);
-      message.error('Не удалось сохранить изменения');
+      message.error(t('form.updateError'));
     } finally {
       setSaving(false);
     }
@@ -100,13 +114,13 @@ export default function FormPage() {
   };
 
   const renderAnswer = (answer, question) => {
-    if (!question) return <Text type="secondary">Вопрос не найден</Text>;
+    if (!question) return <Text type="secondary">{t('form.questionNotFound')}</Text>;
 
     switch (question.type) {
       case 'TEXT':
       case 'TEXTAREA':
       case 'NUMBER':
-        return <Text>{answer.value || <Text type="secondary">Нет ответа</Text>}</Text>;
+        return <Text>{answer.value || <Text type="secondary">{t('form.noAnswer')}</Text>}</Text>;
 
       case 'CHECKBOX':
         const selectedOptions = Array.isArray(answer.value)
@@ -115,9 +129,11 @@ export default function FormPage() {
             )
           : [];
         return (
-          <div>
+          <div className="checkbox-answers">
             {selectedOptions.map((opt, i) => (
-              <div key={i}>{opt}</div>
+              <Tag key={i} color="blue" className="answer-tag">
+                {opt}
+              </Tag>
             ))}
           </div>
         );
@@ -125,7 +141,11 @@ export default function FormPage() {
       case 'RADIO':
       case 'SELECT':
         const selectedOption = question.options.find(opt => opt.id === answer.value);
-        return <Text>{selectedOption ? selectedOption.value : answer.value}</Text>;
+        return (
+          <Text strong className="selected-answer">
+            {selectedOption ? selectedOption.value : answer.value}
+          </Text>
+        );
 
       default:
         return <Text>{answer.value}</Text>;
@@ -141,7 +161,8 @@ export default function FormPage() {
           <Input
             value={answers[question.id] || ''}
             onChange={e => handleAnswerChange(question.id, e.target.value)}
-            placeholder="Введите ответ"
+            placeholder={t('form.answerPlaceholder')}
+            className="form-input"
           />
         );
 
@@ -151,7 +172,8 @@ export default function FormPage() {
             rows={3}
             value={answers[question.id] || ''}
             onChange={e => handleAnswerChange(question.id, e.target.value)}
-            placeholder="Введите ответ"
+            placeholder={t('form.answerPlaceholder')}
+            className="form-textarea"
           />
         );
 
@@ -161,7 +183,8 @@ export default function FormPage() {
             type="number"
             value={answers[question.id] || ''}
             onChange={e => handleAnswerChange(question.id, e.target.value)}
-            placeholder="Введите число"
+            placeholder={t('form.numberPlaceholder')}
+            className="form-input"
           />
         );
 
@@ -170,10 +193,15 @@ export default function FormPage() {
           <Checkbox.Group
             value={answers[question.id] || []}
             onChange={values => handleAnswerChange(question.id, values)}
+            className="checkbox-group"
           >
             <Space direction="vertical">
               {question.options?.map(option => (
-                <Checkbox key={option.id} value={option.id}>
+                <Checkbox
+                  key={option.id}
+                  value={option.id}
+                  className="form-checkbox"
+                >
                   {option.value}
                 </Checkbox>
               ))}
@@ -186,10 +214,15 @@ export default function FormPage() {
           <Radio.Group
             value={answers[question.id]}
             onChange={e => handleAnswerChange(question.id, e.target.value)}
+            className="radio-group"
           >
             <Space direction="vertical">
               {question.options?.map(option => (
-                <Radio key={option.id} value={option.id}>
+                <Radio
+                  key={option.id}
+                  value={option.id}
+                  className="form-radio"
+                >
                   {option.value}
                 </Radio>
               ))}
@@ -202,7 +235,8 @@ export default function FormPage() {
           <Select
             value={answers[question.id]}
             onChange={value => handleAnswerChange(question.id, value)}
-            style={{ width: '100%' }}
+            className="form-select"
+            placeholder={t('form.selectPlaceholder')}
           >
             {question.options?.map(option => (
               <Select.Option key={option.id} value={option.id}>
@@ -213,37 +247,62 @@ export default function FormPage() {
         );
 
       default:
-        return <Input placeholder="Ответ" />;
+        return <Input placeholder={t('form.answerPlaceholder')} className="form-input" />;
     }
   };
 
+  if (error) {
+    return (
+      <div className="form-error-container">
+        <Alert
+          message={t('form.errorTitle')}
+          description={error}
+          type="error"
+          showIcon
+        />
+        <Button
+          type="primary"
+          onClick={() => navigate('/')}
+          className="home-button"
+        >
+          {t('form.backToHome')}
+        </Button>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div style={{ padding: 24 }}>
-        <Skeleton active paragraph={{ rows: 6 }} />
+      <div className="form-loading-container">
+        <Skeleton active paragraph={{ rows: 8 }} />
       </div>
     );
   }
 
   if (!form) {
     return (
-      <div style={{ textAlign: 'center', padding: 48 }}>
-        <Title level={3}>Форма не найдена</Title>
-        <Button type="primary" onClick={() => navigate('/')}>
-          На главную
+      <div className="form-not-found">
+        <Title level={3}>{t('form.formNotFound')}</Title>
+        <Button
+          type="primary"
+          onClick={() => navigate('/')}
+          className="home-button"
+        >
+          {t('form.backToHome')}
         </Button>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: '0 auto', padding: 24 }}>
+    <div className={`form-page ${darkMode ? 'dark' : 'light'}`}>
       <Card
         title={
-          <Title level={2} style={{ marginBottom: 0 }}>
-            {form.template?.title || 'Форма без названия'}
+          <Title level={2} className="form-title">
+            {form.template?.title || t('form.untitledForm')}
           </Title>
         }
+        className="form-card"
         extra={
           canEdit() && (
             <Space>
@@ -254,56 +313,70 @@ export default function FormPage() {
                     icon={<SaveOutlined />}
                     onClick={handleSave}
                     loading={saving}
+                    className="save-button"
                   >
-                    Сохранить
+                    {t('form.save')}
                   </Button>
                   <Button
                     icon={<CloseOutlined />}
                     onClick={() => setEditing(false)}
                     disabled={saving}
+                    className="cancel-button"
                   >
-                    Отменить
+                    {t('form.cancel')}
                   </Button>
                 </>
               ) : (
                 <Button
-                    type="primary"
-                    icon={<EditOutlined />}
-                    onClick={() => setEditing(true)}
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => setEditing(true)}
+                  className="edit-button"
                 >
-                    Редактировать
+                  {t('form.edit')}
                 </Button>
               )}
             </Space>
           )
         }
       >
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <div>
-            <Text strong>Заполнено:</Text>{' '}
+        <Descriptions
+          bordered
+          column={1}
+          className="form-metadata"
+        >
+          <Descriptions.Item label={t('form.submitted')}>
             <Tooltip title={moment(form.createdAt).format('LLL')}>
-              <span>{moment(form.createdAt).fromNow()}</span>
+              <span>
+                <CalendarOutlined /> {moment(form.createdAt).fromNow()}
+              </span>
             </Tooltip>
-          </div>
+          </Descriptions.Item>
 
-          <div>
-            <Text strong>Пользователь:</Text>{' '}
+          <Descriptions.Item label={t('form.user')}>
             <span>
-              {form.user?.username || 'Аноним'}
-              {form.user?.id === user?.id && ' (Вы)'}
+              <UserOutlined /> {form.user?.username || t('form.anonymous')}
+              {form.user?.id === user?.id && ` (${t('form.you')})`}
             </span>
-          </div>
+          </Descriptions.Item>
 
-          <div>
-            <Text strong>Статус:</Text>{' '}
+          {form.user?.email && (
+            <Descriptions.Item label={t('form.email')}>
+              <span>
+                <MailOutlined /> {form.user.email}
+              </span>
+            </Descriptions.Item>
+          )}
+
+          <Descriptions.Item label={t('form.status')}>
             <Badge
               status={form.completed ? 'success' : 'warning'}
-              text={form.completed ? 'Завершено' : 'Черновик'}
+              text={form.completed ? t('form.completed') : t('form.draft')}
             />
-          </div>
-        </Space>
+          </Descriptions.Item>
+        </Descriptions>
 
-        <Divider orientation="left">Ответы</Divider>
+        <Divider orientation="left">{t('form.answersSection')}</Divider>
 
         <List
           itemLayout="vertical"
@@ -312,27 +385,34 @@ export default function FormPage() {
             const question = form.template?.questions?.find(q => q.id === answer.questionId);
 
             return (
-              <List.Item>
+              <List.Item className="answer-item">
                 <List.Item.Meta
                   title={
-                    <Text strong>
-                      {question?.title || 'Неизвестный вопрос'}
+                    <Text strong className="question-title">
+                      {question?.title || t('form.unknownQuestion')}
                       {question?.isRequired && (
-                        <Text type="danger" style={{ marginLeft: 8 }}>*</Text>
+                        <Text type="danger" className="required-star">*</Text>
                       )}
                     </Text>
                   }
-                  description={question?.description}
+                  description={question?.description && (
+                    <Text type="secondary" className="question-description">
+                      {question.description}
+                    </Text>
+                  )}
                 />
 
-                {editing ? (
-                  renderEditableAnswer(answer, question)
-                ) : (
-                  renderAnswer(answer, question)
-                )}
+                <div className="answer-content">
+                  {editing ? (
+                    renderEditableAnswer(answer, question)
+                  ) : (
+                    renderAnswer(answer, question)
+                  )}
+                </div>
               </List.Item>
             );
           }}
+          className="answers-list"
         />
       </Card>
     </div>

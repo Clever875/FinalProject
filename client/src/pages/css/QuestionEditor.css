@@ -1,0 +1,77 @@
+.question-editor-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dark .question-editor-card {
+  background: #1f1f1f;
+  border: 1px solid #333;
+}
+
+.question-form {
+  padding: 8px;
+}
+
+.question-text textarea {
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.question-settings {
+  margin-top: 16px;
+}
+
+.type-select .ant-form-item-control {
+  width: 100%;
+}
+
+.switches-group {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.switch-item .ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+.options-section {
+  margin-top: 16px;
+}
+
+.options-title {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.options-list {
+  margin-bottom: 12px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.option-input {
+  flex: 1;
+  margin-right: 8px;
+  border-radius: 6px;
+}
+
+.remove-option-button {
+  flex-shrink: 0;
+}
+
+.add-option-button {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.remove-question-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}

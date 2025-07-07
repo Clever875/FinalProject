@@ -1,0 +1,214 @@
+.home-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.welcome-title {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.search-container {
+  margin-bottom: 32px;
+  display: flex;
+  justify-content: center;
+}
+
+.search-input {
+  max-width: 600px;
+}
+
+.search-button {
+  background-color: #1890ff;
+  border-color: #1890ff;
+}
+
+.stats-row {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  text-align: center;
+  border-radius: 8px;
+  height: 100%;
+}
+
+.section-title {
+  margin-bottom: 16px;
+}
+
+.templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.template-card {
+  height: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.template-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.template-cover {
+  height: 160px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.template-placeholder {
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f2f5;
+}
+
+.template-placeholder.dark-mode {
+  background-color: #333;
+}
+
+.template-meta {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 160px);
+}
+
+.template-description {
+  display: block;
+  margin-bottom: 8px;
+  min-height: 44px;
+}
+
+.template-tags {
+  margin-bottom: 8px;
+}
+
+.topic-tag {
+  margin-right: 8px;
+}
+
+.like-badge {
+  background-color: #52c41a;
+}
+
+.star-icon {
+  color: #faad14;
+}
+
+.template-author {
+  margin-top: auto;
+  font-size: 12px;
+}
+
+.popular-card, .tags-card {
+  height: 100%;
+  border-radius: 8px;
+}
+
+.popular-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.popular-list-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.popular-template-title {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.popular-template-meta {
+  margin-bottom: 4px;
+}
+
+.popular-template-stats {
+  display: flex;
+  align-items: center;
+}
+
+.form-count-badge {
+  background-color: #1890ff;
+}
+
+.like-count-badge {
+  background-color: #52c41a;
+}
+
+.tag-cloud {
+  min-height: 150px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.tag-item {
+  margin: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.tag-item:hover {
+  transform: scale(1.05);
+}
+
+.light-tag {
+  background-color: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+}
+
+.dark-tag {
+  background-color: #111b26;
+  border-color: #153450;
+  color: #40a9ff;
+}
+
+.cta-card {
+  margin-top: 32px;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.cta-title {
+  margin-bottom: 8px;
+}
+
+.cta-description {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.cta-buttons {
+  justify-content: center;
+}
+
+.error-container {
+  padding: 24px;
+  text-align: center;
+}
+
+.skeleton-card {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.empty-card {
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}

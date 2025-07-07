@@ -1,0 +1,130 @@
+.template-form-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.template-form-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.dark .template-form-card {
+  background: #1f1f1f;
+  border: 1px solid #333;
+}
+
+.editor-title {
+  margin-bottom: 0;
+}
+
+.save-button {
+  height: 40px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.form-input, .form-textarea, .form-select {
+  border-radius: 8px;
+  padding: 10px 15px;
+}
+
+.add-question-button {
+  width: 100%;
+  height: 46px;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.form-actions {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.submit-button {
+  height: 46px;
+  border-radius: 8px;
+  font-weight: 600;
+  min-width: 160px;
+}
+
+.reset-button {
+  height: 46px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.image-upload {
+  width: 100%;
+  text-align: center;
+}
+
+.image-upload-placeholder {
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #fafafa;
+  transition: border-color 0.3s;
+}
+
+.dark .image-upload-placeholder {
+  border-color: #434343;
+  background: #141414;
+}
+
+.image-upload-placeholder:hover {
+  border-color: #1890ff;
+}
+
+.image-preview {
+  position: relative;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.image-preview:hover .image-overlay {
+  opacity: 1;
+}
+
+.access-switch .ant-form-item-control {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.template-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+}
+
+.loading-text {
+  margin-top: 16px;
+}

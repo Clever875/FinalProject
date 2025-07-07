@@ -8,49 +8,63 @@ import {
   Typography,
   Card,
   Row,
-  Col
+  Col,
+  Form
 } from 'antd';
 import {
   DeleteOutlined,
   PlusOutlined,
   CloseOutlined
 } from '@ant-design/icons';
+import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
+import './css/QuestionEditor.css';
 
 const { Text } = Typography;
 const { TextArea } = Input;
-
-const DEFAULT_QUESTION_TYPES = [
-  { value: 'TEXT', label: 'Текст (одна строка)' },
-  { value: 'TEXTAREA', label: 'Текст (много строк)' },
-  { value: 'NUMBER', label: 'Число' },
-  { value: 'CHECKBOX', label: 'Чекбокс' },
-  { value: 'SELECT', label: 'Выпадающий список' },
-  { value: 'RADIO', label: 'Радиокнопки' },
-];
 
 const QuestionEditor = ({
   question = {},
   index = 0,
   onChange = () => {},
   onRemove = () => {},
-  questionTypes = DEFAULT_QUESTION_TYPES
+  t
 }) => {
-  const handleTextChange = (e) => {
-    onChange({ ...question, text: e.target.value });
-  };
+  const { darkMode } = useTheme();
+  const [form] = Form.useForm();
 
-  const handleTypeChange = (value) => {
-    const newQuestion = { ...question, type: value };
+  // Инициализация формы
+  React.useEffect(() => {
+    form.setFieldsValue({
+      text: question.text || '',
+      type: question.type || 'TEXT',
+      isRequired: question.isRequired !== false,
+      displayInTable: !!question.displayInTable
+    });
+  }, [question, form]);
 
-    if (!['SELECT', 'RADIO', 'CHECKBOX'].includes(value)) {
-      newQuestion.options = [];
-    }
+  const questionTypes = [
+    { value: 'TEXT', label: t('question.types.TEXT') },
+    { value: 'TEXTAREA', label: t('question.types.TEXTAREA') },
+    { value: 'NUMBER', label: t('question.types.NUMBER') },
+    { value: 'CHECKBOX', label: t('question.types.CHECKBOX') },
+    { value: 'SELECT', label: t('question.types.SELECT') },
+    { value: 'RADIO', label: t('question.types.RADIO') },
+  ];
 
+  const handleValuesChange = (_, allValues) => {
+    const newQuestion = {
+      ...question,
+      ...allValues,
+      options: ['SELECT', 'RADIO', 'CHECKBOX'].includes(allValues.type)
+        ? question.options || []
+        : []
+    };
     onChange(newQuestion);
   };
 
   const handleOptionChange = (optionIndex, value) => {
-    const options = [...question.options || []];
+    const options = [...(question.options || [])];
     options[optionIndex] = value;
     onChange({ ...question, options });
   };
@@ -63,7 +77,7 @@ const QuestionEditor = ({
   };
 
   const removeOption = (optionIndex) => {
-    const options = [...question.options || []];
+    const options = [...(question.options || [])];
     options.splice(optionIndex, 1);
     onChange({ ...question, options });
   };
@@ -72,32 +86,38 @@ const QuestionEditor = ({
     if (!['SELECT', 'RADIO', 'CHECKBOX'].includes(question.type)) return null;
 
     return (
-      <div style={{ marginTop: 16 }}>
-        <Text strong>Варианты ответов:</Text>
-        {(question.options || []).map((option, idx) => (
-          <div key={idx} style={{ marginTop: 8, display: 'flex', alignItems: 'center' }}>
-            <Input
-              value={option}
-              placeholder={`Вариант ${idx + 1}`}
-              onChange={(e) => handleOptionChange(idx, e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <Button
-              type="text"
-              icon={<CloseOutlined />}
-              onClick={() => removeOption(idx)}
-              style={{ marginLeft: 8 }}
-              danger
-            />
-          </div>
-        ))}
+      <div className="options-section">
+        <Text strong className="options-title">
+          {t('question.options')}
+        </Text>
+
+        <div className="options-list">
+          {(question.options || []).map((option, idx) => (
+            <div key={idx} className="option-item">
+              <Input
+                value={option}
+                placeholder={`${t('question.option')} ${idx + 1}`}
+                onChange={(e) => handleOptionChange(idx, e.target.value)}
+                className="option-input"
+              />
+              <Button
+                type="text"
+                icon={<CloseOutlined />}
+                onClick={() => removeOption(idx)}
+                className="remove-option-button"
+                danger
+              />
+            </div>
+          ))}
+        </div>
+
         <Button
           type="dashed"
           onClick={addOption}
           icon={<PlusOutlined />}
-          style={{ marginTop: 8 }}
+          className="add-option-button"
         >
-          Добавить вариант
+          {t('question.addOption')}
         </Button>
       </div>
     );
@@ -105,67 +125,76 @@ const QuestionEditor = ({
 
   return (
     <Card
-      title={`Вопрос ${index + 1}`}
-      size="small"
-      style={{ marginBottom: 16 }}
+      title={`${t('question.title')} ${index + 1}`}
+      className={`question-editor-card ${darkMode ? 'dark' : 'light'}`}
       extra={
         <Button
           type="text"
           icon={<DeleteOutlined />}
           onClick={onRemove}
           danger
+          className="remove-question-button"
         />
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <TextArea
-          placeholder="Текст вопроса"
-          value={question.text || ''}
-          onChange={handleTextChange}
-          autoSize={{ minRows: 2, maxRows: 6 }}
-        />
+      <Form
+        form={form}
+        layout="vertical"
+        onValuesChange={handleValuesChange}
+        className="question-form"
+      >
+        <Form.Item
+          name="text"
+          rules={[
+            {
+              required: true,
+              message: t('question.textRequired')
+            }
+          ]}
+        >
+          <TextArea
+            placeholder={t('question.textPlaceholder')}
+            autoSize={{ minRows: 2, maxRows: 6 }}
+            className="question-text"
+          />
+        </Form.Item>
 
-        <Row gutter={16} style={{ marginTop: 16 }}>
+        <Row gutter={16} className="question-settings">
           <Col span={12}>
-            <div>
-              <Text strong style={{ display: 'block', marginBottom: 4 }}>Тип вопроса</Text>
-              <Select
-                value={question.type || 'TEXT'}
-                onChange={handleTypeChange}
-                style={{ width: '100%' }}
-              >
-                {questionTypes.map((type) => (
-                  <Select.Option key={type.value} value={type.value}>
-                    {type.label}
-                  </Select.Option>
-                ))}
-              </Select>
-            </div>
+            <Form.Item
+              name="type"
+              label={t('question.typeLabel')}
+              className="type-select"
+            >
+              <Select options={questionTypes} />
+            </Form.Item>
           </Col>
 
           <Col span={12}>
-            <Space style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 4 }}>Обязательный</Text>
-                <Switch
-                  checked={question.isRequired !== false}
-                  onChange={checked => onChange({ ...question, isRequired: checked })}
-                />
-              </div>
+            <Space className="switches-group">
+              <Form.Item
+                name="isRequired"
+                label={t('question.requiredLabel')}
+                valuePropName="checked"
+                className="switch-item"
+              >
+                <Switch />
+              </Form.Item>
 
-              <div>
-                <Text strong style={{ display: 'block', marginBottom: 4 }}>В таблице</Text>
-                <Switch
-                  checked={!!question.displayInTable}
-                  onChange={checked => onChange({ ...question, displayInTable: checked })}
-                />
-              </div>
+              <Form.Item
+                name="displayInTable"
+                label={t('question.displayInTableLabel')}
+                valuePropName="checked"
+                className="switch-item"
+              >
+                <Switch />
+              </Form.Item>
             </Space>
           </Col>
         </Row>
 
         {renderOptions()}
-      </Space>
+      </Form>
     </Card>
   );
 };

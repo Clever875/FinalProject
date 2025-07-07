@@ -1,0 +1,129 @@
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.auth-page.light {
+  background: #f0f2f5;
+}
+
+.auth-page.dark {
+  background: #141414;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.auth-page.dark .auth-card {
+  background: #1f1f1f;
+  border: 1px solid #333;
+}
+
+.auth-title {
+  text-align: center;
+  margin-bottom: 24px !important;
+}
+
+.auth-form {
+  margin-top: 20px;
+}
+
+.auth-input {
+  border-radius: 8px;
+  padding: 10px 15px;
+}
+
+.auth-button {
+  height: 46px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.auth-options {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.remember-checkbox {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.auth-page.dark .remember-checkbox {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.forgot-link {
+  color: #1890ff;
+}
+
+.auth-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.auth-link {
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.divider {
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+}
+
+.auth-page.dark .divider {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.social-buttons {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.social-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: none;
+}
+
+.social-button.google {
+  background: #db4437;
+  color: white;
+}
+
+.social-button.facebook {
+  background: #4267B2;
+  color: white;
+}
+
+.social-button.github {
+  background: #333;
+  color: white;
+}
+
+.auth-page.dark .social-button.github {
+  background: #f0f0f0;
+  color: #333;
+}

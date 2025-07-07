@@ -1,0 +1,118 @@
+/* AdminPanel.css */
+.admin-access-denied {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 64px);
+}
+
+.access-denied-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.denied-icon {
+  font-size: 48px;
+  color: #ff4d4f;
+  margin-bottom: 16px;
+}
+
+.admin-panel {
+  padding: 24px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  font-size: 24px;
+  color: #1890ff;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.search-input {
+  width: 300px;
+}
+
+.stats-summary {
+  background: #f0f2f5;
+  padding: 16px 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-badge .ant-badge-count {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 0 0 1px #d9d9d9 inset;
+}
+
+.stat-badge.active .ant-badge-count {
+  color: #52c41a;
+  box-shadow: 0 0 0 1px #52c41a inset;
+}
+
+.stat-badge.admin .ant-badge-count {
+  color: #1890ff;
+  box-shadow: 0 0 0 1px #1890ff inset;
+}
+
+.error-alert {
+  margin-bottom: 16px;
+}
+
+.empty-table {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.role-selector {
+  width: 120px;
+}
+
+.block-btn, .delete-btn {
+  min-width: 32px;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .admin-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+  }
+
+  .stats-summary {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

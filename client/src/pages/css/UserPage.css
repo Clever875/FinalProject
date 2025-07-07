@@ -1,0 +1,178 @@
+/* src/pages/css/UserPage.css */
+.user-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.profile-card {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #eee;
+}
+
+.profile-avatar {
+  margin-right: 20px;
+  background-color: #1890ff;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name {
+  margin-bottom: 4px !important;
+}
+
+.profile-email {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.profile-role {
+  align-self: flex-start;
+  font-size: 14px;
+}
+
+.profile-tabs .ant-tabs-nav {
+  padding: 0 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 0 20px;
+}
+
+.section-title {
+  margin: 0 !important;
+}
+
+.new-template-btn {
+  margin-left: 10px;
+}
+
+.templates-table {
+  padding: 0 20px;
+}
+
+.templates-table .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.template-link {
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.form-badge .ant-badge-count,
+.like-badge .ant-badge-count {
+  background-color: #fa8c16;
+}
+
+.profile-section {
+  padding: 0 20px 20px;
+}
+
+.profile-details .ant-descriptions-item-label {
+  font-weight: 500;
+  width: 200px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.settings-title {
+  margin-top: 24px !important;
+  margin-bottom: 16px !important;
+}
+
+.danger-zone {
+  padding: 20px;
+  background: #fff1f0;
+  border-radius: 8px;
+  border: 1px solid #ffccc7;
+  margin-top: 24px;
+}
+
+/* Адаптация для мобильных устройств */
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .profile-avatar {
+    margin-right: 0;
+    margin-bottom: 16px;
+  }
+
+  .profile-info {
+    align-items: center;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .new-template-btn {
+    margin-left: 0;
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .setting-item > * {
+    margin-bottom: 8px;
+  }
+}
+
+/* Темная тема */
+[data-theme="dark"] .profile-card {
+  background-color: #1f1f1f;
+  border-color: #333;
+}
+
+[data-theme="dark"] .profile-header {
+  background-color: #141414;
+  border-color: #333;
+}
+
+[data-theme="dark"] .profile-email {
+  color: #8c8c8c;
+}
+
+[data-theme="dark"] .templates-table .ant-table {
+  background-color: #1f1f1f;
+}
+
+[data-theme="dark"] .danger-zone {
+  background-color: #2a1215;
+  border-color: #58181c;
+}
+
+[data-theme="dark"] .setting-item {
+  border-color: #333;
+}

@@ -1,161 +1,151 @@
-import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
-import { jwtDecode } from 'jwt-decode';
+// src/AuthContext.js
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import { jwtDecode } from 'jwt-decode'; // Правильный импорт именованного экспорта
 import { authApi } from './api';
 
-export const AuthContext = createContext();
+export const AuthContext = createContext(); // Экспорт контекста
 
-export function AuthProvider({ children }) {
-  const [authState, setAuthState] = useState({
-    token: localStorage.getItem('token') || null,
-    user: null,
-    loading: true,
-    error: null
-  });
+export const AuthProvider = ({ children }) => {
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Проверка токена при загрузке приложения
+  // Функция для входа пользователя
+  const login = async (credentials) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await authApi.login(credentials);
+      localStorage.setItem('token', response.token);
+      setToken(response.token);
+
+      const decoded = jwtDecode(response.token); // Исправленное использование
+      setUser(decoded);
+
+      return response;
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Функция для регистрации пользователя
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await authApi.register(userData);
+      return response;
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Функция для выхода пользователя
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    authApi.logout();
+  }, []);
+
+  // Функция для обновления профиля пользователя
+  const updateProfile = async (data) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await authApi.updateProfile(data);
+      const decoded = jwtDecode(response.token); // Исправлено
+      setUser(decoded);
+      setToken(response.token);
+      localStorage.setItem('token', response.token);
+
+      return response;
+    } catch (err) {
+      console.error('Profile update error:', err);
+      setError(err.message || 'Profile update failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Проверка аутентификации при загрузке приложения
   useEffect(() => {
-    const initializeAuth = async () => {
-      const token = localStorage.getItem('token');
-
-      if (!token) {
-        setAuthState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-
+    const verifyToken = async () => {
       try {
-        // Проверяем валидность токена
-        const decoded = jwtDecode(token);
+        if (token) {
+          const decoded = jwtDecode(token); // Исправлено
 
-        // Проверяем срок действия токена
-        if (decoded.exp * 1000 < Date.now()) {
-          throw new Error('Token expired');
+          // Проверка срока действия токена
+          const currentTime = Date.now() / 1000;
+          if (decoded.exp < currentTime) {
+            // Попытка обновить токен
+            const response = await authApi.refreshToken(token);
+            localStorage.setItem('token', response.token);
+            setToken(response.token);
+
+            const newDecoded = jwtDecode(response.token); // Исправлено
+            setUser(newDecoded);
+          } else {
+            setUser(decoded);
+          }
         }
-
-        // Проверяем токен на сервере
-        const userData = await authApi.getMe();
-        setAuthState({
-          token,
-          user: userData,
-          loading: false,
-          error: null
-        });
-      } catch (error) {
-        console.error('Authentication initialization error:', error);
-        localStorage.removeItem('token');
-        setAuthState({
-          token: null,
-          user: null,
-          loading: false,
-          error: 'Session expired. Please log in again.'
-        });
+      } catch (err) {
+        console.error('Token verification error:', err);
+        logout();
+      } finally {
+        setLoading(false);
       }
     };
 
-    initializeAuth();
-  }, []);
+    verifyToken();
 
-  const login = useCallback(async (email, password) => {
-    setAuthState(prev => ({ ...prev, loading: true, error: null }));
+    // Очистка при размонтировании
+    return () => {
+      setLoading(false);
+    };
+  }, [token, logout]);
 
-    try {
-      // Получаем полный ответ сервера
-      const response = await authApi.login({ email, password });
+  // Проверка ролей пользователя
+  const hasRole = (role) => {
+    return user?.role === role;
+  };
 
-      localStorage.setItem('token', response.token);
-      setAuthState({
-        token: response.token,
-        user: response.user, // Используем данные с сервера
-        loading: false,
-        error: null
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Login error:', error);
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'Login failed. Please check your credentials.'
-      }));
-      return false;
-    }
-  }, []);
-
-  const register = useCallback(async (name, email, password) => {
-    setAuthState(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
-      await authApi.register({ name, email, password });
-
-      // Автоматический вход после регистрации
-      const success = await login(email, password);
-      return success;
-    } catch (error) {
-      console.error('Registration error:', error);
-      setAuthState(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message || 'Registration failed. Please try again.'
-      }));
-      return false;
-    }
-  }, [login]);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    setAuthState({
-      token: null,
-      user: null,
-      loading: false,
-      error: null
-    });
-
-    // Опционально: вызов API для серверного логаута
-    try {
-      authApi.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  }, []);
-
-  const refreshUser = useCallback(async () => {
-    if (!authState.token) return;
-
-    try {
-      const userData = await authApi.getMe();
-      setAuthState(prev => ({
-        ...prev,
-        user: userData
-      }));
-      return userData;
-    } catch (error) {
-      console.error('Failed to refresh user data:', error);
-      logout();
-      return null;
-    }
-  }, [authState.token, logout]);
-
-  const value = {
-    ...authState,
+  const contextValue = {
+    token,
+    user,
+    loading,
+    error,
     login,
     register,
     logout,
-    refreshUser,
-    isAuthenticated: !!authState.token,
-    isAdmin: authState.user?.role === 'ADMIN'
+    updateProfile,
+    hasRole,
+    isAuthenticated: !!token
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-// Кастомный хук для удобного доступа к контексту
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
+  const context = React.useContext(AuthContext);
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

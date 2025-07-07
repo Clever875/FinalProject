@@ -1,0 +1,124 @@
+.template-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.template-header-card {
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.template-image-col {
+  display: flex;
+  justify-content: center;
+}
+
+.template-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.template-image-placeholder {
+  width: 100%;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+  border-radius: 8px;
+  font-size: 64px;
+  color: #bfbfbf;
+}
+
+.dark .template-image-placeholder {
+  background: #141414;
+}
+
+.template-header {
+  margin-bottom: 16px;
+}
+
+.template-title {
+  margin-bottom: 8px !important;
+}
+
+.template-meta {
+  margin-bottom: 8px;
+}
+
+.template-description {
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.template-author {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.author-icon {
+  margin-right: 8px;
+  font-size: 18px;
+  color: #1890ff;
+}
+
+.template-stats {
+  margin-bottom: 24px;
+}
+
+.template-actions {
+  margin-top: 16px;
+}
+
+.template-tabs {
+  margin-top: 16px;
+}
+
+.info-card, .questions-card, .responses-card, .analytics-card {
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.section-title {
+  margin-bottom: 16px !important;
+}
+
+.tags-section {
+  margin-bottom: 24px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-tag {
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.allowed-users {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.user-tag {
+  background: #e6f7ff;
+  border-color: #91d5ff;
+  color: #1890ff;
+  border-radius: 20px;
+}
+
+.dark .user-tag {
+  background: #111b26;
+  border-color: #153450;
+}
