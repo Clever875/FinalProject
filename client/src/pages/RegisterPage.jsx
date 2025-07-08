@@ -37,7 +37,6 @@ export default function RegisterPage() {
   const onSubmit = async (values) => {
     try {
       setLoading(true);
-      // Исправлено: передача объекта вместо отдельных параметров
       await register({
         name: values.name,
         email: values.email,
@@ -46,10 +45,7 @@ export default function RegisterPage() {
       message.success(t('register.successMessage'));
       navigate('/templates');
     } catch (error) {
-      // Улучшенная обработка ошибок
-      const errorMessage = error.response?.data?.error ||
-                          error.message ||
-                          t('register.errorMessage');
+      const errorMessage = error.response?.data?.error || error.message || t('register.errorMessage');
       message.error(errorMessage);
     } finally {
       setLoading(false);

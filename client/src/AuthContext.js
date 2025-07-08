@@ -7,26 +7,32 @@ import { authApi } from './api';
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('token') || sessionStorage.getItem('token') || null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const handleAuthSuccess = useCallback((response) => {
-    const { token } = response;
+  const handleAuthSuccess = useCallback((response, remember) => {
+  const { token } = response;
+  if (remember) {
     localStorage.setItem('token', token);
-    setToken(token);
-    const decoded = jwtDecode(token);
-    setUser(decoded);
-    return response;
-  }, []);
-
+  } else {
+    sessionStorage.setItem('token', token);
+  }
+  setToken(token);
+  const decoded = jwtDecode(token);
+  setUser(decoded);
+  return response;
+}, []);
   const login = async (credentials) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await authApi.login(credentials);
-      return handleAuthSuccess(response);
+      const response = await authApi.login({
+      email: credentials.email,
+      password: credentials.password
+    });
+      return handleAuthSuccess(response, credentials.rememberMe);
     } catch (err) {
       console.error('Login error:', err);
       setError(err.response?.data?.error || err.message || 'Login failed');
@@ -57,6 +63,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
+    sessionStorage.removeItem('token');
     setToken(null);
     setUser(null);
     authApi.logout().catch(err => console.error('Logout error:', err));

@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bodyParser from 'body-parser';
 
 import adminRoutes from './routes/admin.js';
 import templatesRouter from './routes/templates.js';
@@ -45,7 +46,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 app.use(express.json({
-  strict: false, 
+  strict: false,
   verify: (req, res, buf) => {
     try {
       JSON.parse(buf.toString());
@@ -54,8 +55,16 @@ app.use(express.json({
     }
   }
 }));
-
-// API Routes
+app.use(bodyParser.json({
+  verify: (req, res, buf, encoding) => {
+    try {
+      JSON.parse(buf.toString('utf8'));
+    } catch (e) {
+      res.status(400).json({ error: "Invalid JSON" });
+      throw new Error('Invalid JSON');
+    }
+  }
+}));
 app.use('/api/tags', tagsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);

@@ -37,7 +37,11 @@ export default function LoginPage() {
   const onSubmit = async (values) => {
     try {
       setLoading(true);
-      const success = await login(values.email, values.password, rememberMe);
+      const success = await login({
+      email: values.email,
+      password: values.password,
+      rememberMe: rememberMe
+    });
       if (success) {
         message.success(t('login.welcomeMessage'));
         navigate('/templates');

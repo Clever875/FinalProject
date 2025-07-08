@@ -33,7 +33,7 @@ export default async function authenticate(req, res, next) {
       select: {
         id: true,
         email: true,
-        username: true,
+        name: true,
         role: true,
         isBlocked: true,
         lastActive: true
