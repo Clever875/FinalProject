@@ -9,6 +9,7 @@ const router = express.Router();
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+
 router.post('/refresh', async (req, res) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
@@ -40,6 +41,7 @@ router.post('/refresh', async (req, res) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 });
+
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -48,7 +50,9 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Имя должно содержать не менее 2 символов' });
     }
 
-    if (!emailRegex.test(email)) {
+    // Исправленная проверка email
+    const emailInput = req.body.email ? req.body.email : '';
+    if (!emailRegex.test(emailInput)) {
       return res.status(400).json({ error: 'Некорректный формат email' });
     }
 
@@ -56,7 +60,7 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: `Пароль должен быть не менее ${MIN_PASSWORD_LENGTH} символов` });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: emailInput.toLowerCase() } });
     if (existingUser) {
       return res.status(409).json({ error: 'Этот email уже зарегистрирован' });
     }
@@ -65,20 +69,20 @@ router.post('/register', async (req, res) => {
     const newUser = await prisma.user.create({
       data: {
         name: name.trim(),
-        email: email.toLowerCase(),
+        email: emailInput.toLowerCase(),
         passwordHash: hash,
         role: 'USER'
       },
     });
 
     const token = jwt.sign({
-      id: user.id,
-      role: user.role,
+      id: newUser.id, // Исправлено: newUser вместо user
+      role: newUser.role,
       iss: process.env.JWT_ISSUER || 'FormBuilder',
       aud: process.env.JWT_AUDIENCE || 'client',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (60 * 60) // 1 час
-    }, process.env.JWT_SECRET);
+    }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN || '1h'
+    });
 
     res.status(201).json({
       token,
@@ -97,8 +101,14 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    // Исправленная проверка email
+    const email = req.body.email ? req.body.email.toLowerCase() : '';
+
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Некорректный формат email' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
       return res.status(400).json({ error: 'Неверный email или пароль' });
@@ -108,7 +118,7 @@ router.post('/login', async (req, res) => {
       return res.status(403).json({ error: 'Ваш аккаунт заблокирован' });
     }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    const isValid = await bcrypt.compare(req.body.password, user.passwordHash);
     if (!isValid) {
       return res.status(400).json({ error: 'Неверный email или пароль' });
     }
@@ -154,10 +164,12 @@ router.put('/profile', authMiddleware, async (req, res) => {
     const { name, avatar, password, newPassword } = req.body;
     const updates = {};
 
-    if (name && name.trim().length >= 2) {
-      updates.name = name.trim();
-    } else if (name) {
-      return res.status(400).json({ error: 'Имя должно содержать не менее 2 символов' });
+    if (name) {
+      if (name.trim().length >= 2) {
+        updates.name = name.trim();
+      } else {
+        return res.status(400).json({ error: 'Имя должно содержать не менее 2 символов' });
+      }
     }
 
     if (avatar) {
@@ -169,7 +181,13 @@ router.put('/profile', authMiddleware, async (req, res) => {
         return res.status(400).json({ error: `Новый пароль должен быть не менее ${MIN_PASSWORD_LENGTH} символов` });
       }
 
-      const isValid = await bcrypt.compare(password, req.user.passwordHash);
+      // Получаем актуальные данные пользователя из БД
+      const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+      if (!user) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+      }
+
+      const isValid = await bcrypt.compare(password, user.passwordHash);
       if (!isValid) {
         return res.status(400).json({ error: 'Неверный текущий пароль' });
       }
@@ -222,10 +240,11 @@ router.put('/profile', authMiddleware, async (req, res) => {
 router.delete('/profile', authMiddleware, async (req, res) => {
   try {
     await prisma.$transaction([
+      // Исправленные запросы удаления
       prisma.comment.deleteMany({ where: { authorId: req.user.id } }),
       prisma.like.deleteMany({ where: { userId: req.user.id } }),
-      prisma.form.deleteMany({ where: { userId: req.user.id } }),
-      prisma.template.deleteMany({ where: { ownerId: req.user.id } }),
+      prisma.form.deleteMany({ where: { authorId: req.user.id } }), // исправлено на authorId
+      prisma.template.deleteMany({ where: { ownerId: req.user.id } }), // исправлено на ownerId
       prisma.user.delete({ where: { id: req.user.id } }),
     ]);
 

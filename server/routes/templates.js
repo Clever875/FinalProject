@@ -6,7 +6,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 const fullTemplateInclude = {
-  owner: {
+  createdBy: {
     select: {
       id: true,
       name: true,
@@ -21,7 +21,7 @@ const fullTemplateInclude = {
       order: 'asc'
     }
   },
-  tags: {
+  templateTags: {
     select: {
       tag: true
     }
@@ -41,6 +41,100 @@ const fullTemplateInclude = {
   }
 };
 
+// Публичные endpoint'ы (не требуют аутентификации)
+router.get('/public', async (req, res) => {
+  const { search = '', page = 1, limit = 10, sort = 'newest' } = req.query;
+  const pageInt = parseInt(page);
+  const limitInt = parseInt(limit);
+  const skip = (pageInt - 1) * limitInt;
+
+  try {
+    const where = {
+      isPublic: true,
+      OR: [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { topic: { contains: search, mode: 'insensitive' } },
+        { theme: { contains: search, mode: 'insensitive' } },
+        {
+          templateTags: {
+            some: {
+              tag: {
+                name: { contains: search, mode: 'insensitive' }
+              }
+            }
+          }
+        }
+      ]
+    };
+
+    const orderBy = sort === 'popular'
+      ? [{ forms: { _count: 'desc' } }]
+      : sort === 'oldest'
+        ? [{ createdAt: 'asc' }]
+        : [{ createdAt: 'desc' }];
+
+    const [templates, total] = await Promise.all([
+      prisma.template.findMany({
+        where,
+        skip,
+        take: limitInt,
+        orderBy,
+        include: fullTemplateInclude
+      }),
+      prisma.template.count({ where })
+    ]);
+
+    res.json({
+      data: templates,
+      pagination: {
+        total,
+        page: pageInt,
+        limit: limitInt,
+        totalPages: Math.ceil(total / limitInt),
+      },
+    });
+  } catch (err) {
+    console.error('🔥 Ошибка получения публичных шаблонов:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/popular/:limit', async (req, res) => {
+  const limit = parseInt(req.params.limit) || parseInt(req.query.limit) || 5;
+
+  if (isNaN(limit) || limit <= 0) {
+    return res.status(400).json({ error: 'Неверный параметр limit' });
+  }
+
+  try {
+    const templates = await prisma.template.findMany({
+      where: { isPublic: true },
+      orderBy: { forms: { _count: 'desc' } },
+      take: limit,
+      include: {
+        createdBy: { select: { name: true } },
+        _count: {
+          select: {
+            forms: true,
+            likes: true
+          }
+        }
+      }
+    });
+
+    if (!templates || templates.length === 0) {
+      return res.status(404).json({ message: 'Популярные шаблоны не найдены' });
+    }
+
+    res.json(templates);
+  } catch (err) {
+    console.error('Ошибка получения популярных шаблонов:', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Защищенные endpoint'ы (требуют аутентификации)
 router.use(auth);
 
 async function checkAccess(templateId, user) {
@@ -50,9 +144,7 @@ async function checkAccess(templateId, user) {
   const template = await prisma.template.findUnique({
     where: { id },
     include: {
-      allowedUsers: {
-        select: { id: true }
-      }
+      allowedUsers: { select: { id: true } }
     }
   });
 
@@ -60,9 +152,7 @@ async function checkAccess(templateId, user) {
 
   const isOwner = template.ownerId === user.id;
   const isAdmin = user.role === 'ADMIN';
-  const isAllowed = template.isPublic ||
-                   template.allowedUsers.some(u => u.id === user.id) ||
-                   isOwner;
+  const isAllowed = template.isPublic || isOwner || template.allowedUsers.some(u => u.id === user.id);
 
   if (!isOwner && !isAdmin && !isAllowed) {
     return { error: 'Нет доступа к этому шаблону', status: 403 };
@@ -76,6 +166,7 @@ router.post('/', async (req, res) => {
     title,
     description,
     topic,
+    theme,
     imageUrl,
     isPublic = false,
     tags = [],
@@ -107,13 +198,14 @@ router.post('/', async (req, res) => {
         title: title.trim(),
         description: description || '',
         topic: topic || 'Other',
+        theme: theme || '',
         imageUrl,
         isPublic,
         ownerId: req.user.id,
         allowedUsers: {
           connect: allowedUsers.map(id => ({ id }))
         },
-        tags: {
+        templateTags: {
           create: createdTags.map(tag => ({
             tag: { connect: { id: tag.id } }
           }))
@@ -125,7 +217,7 @@ router.post('/', async (req, res) => {
             type: q.type,
             order: i,
             isRequired: q.isRequired !== false,
-            displayInTable: q.displayInTable || false,
+            isVisibleInResults: q.displayInTable || false,
             options: {
               create: (q.options || []).map(option => ({
                 value: option.value || option.text || ''
@@ -144,54 +236,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.get('/public', async (req, res) => {
-  const { search = '', page = 1, limit = 10, sort = 'newest' } = req.query;
-  const pageInt = parseInt(page);
-  const limitInt = parseInt(limit);
-  const skip = (pageInt - 1) * limitInt;
-
-  try {
-    const where = {
-      isPublic: true,
-      OR: [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { topic: { contains: search, mode: 'insensitive' } },
-        { tags: { some: { tag: { name: { contains: search, mode: 'insensitive' } } } } }
-      ]
-    };
-
-    const orderBy = sort === 'popular'
-      ? [{ forms: { _count: 'desc' } }]
-      : [{ createdAt: 'desc' }];
-
-    const [templates, total] = await Promise.all([
-      prisma.template.findMany({
-        where,
-        skip,
-        take: limitInt,
-        orderBy,
-        include: fullTemplateInclude
-      }),
-      prisma.template.count({ where })
-    ]);
-
-    res.json({
-      data: templates,
-      pagination: {
-        total,
-        page: pageInt,
-        limit: limitInt,
-        totalPages: Math.ceil(total / limitInt),
-      },
-    });
-  } catch (err) {
-    console.error('🔥 Ошибка получения публичных шаблонов:', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-
 router.get('/user', async (req, res) => {
   const { page = 1, limit = 10, search = '' } = req.query;
   const pageInt = parseInt(page);
@@ -203,7 +247,9 @@ router.get('/user', async (req, res) => {
       ownerId: req.user.id,
       OR: [
         { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { description: { contains: search, mode: 'insensitive' } },
+        { topic: { contains: search, mode: 'insensitive' } },
+        { theme: { contains: search, mode: 'insensitive' } }
       ]
     };
 
@@ -263,6 +309,7 @@ router.put('/:id', async (req, res) => {
     title,
     description,
     topic,
+    theme,
     imageUrl,
     isPublic,
     tags = [],
@@ -294,12 +341,13 @@ router.put('/:id', async (req, res) => {
         title: title || template.title,
         description: description || template.description,
         topic: topic || template.topic,
+        theme: theme || template.theme,
         imageUrl: imageUrl || template.imageUrl,
         isPublic: isPublic !== undefined ? isPublic : template.isPublic,
         allowedUsers: {
           set: allowedUsers.map(id => ({ id }))
         },
-        tags: {
+        templateTags: {
           create: createdTags.map(tag => ({
             tag: { connect: { id: tag.id } }
           }))
@@ -311,7 +359,7 @@ router.put('/:id', async (req, res) => {
             type: q.type,
             order: i,
             isRequired: q.isRequired !== false,
-            displayInTable: q.displayInTable || false,
+            isVisibleInResults: q.displayInTable || false,
             options: {
               create: (q.options || []).map(option => ({
                 value: option.value || option.text || ''
@@ -361,7 +409,7 @@ router.delete('/', async (req, res) => {
     ]);
 
     const tagsToUpdate = await prisma.tag.findMany({
-      where: { templates: { some: { templateId: { in: deletableIds } } } }
+      where: { templateTags: { some: { templateId: { in: deletableIds } } } }
     });
 
     for (const tag of tagsToUpdate) {
@@ -414,7 +462,7 @@ router.post('/:id/questions', async (req, res) => {
         type: question.type || 'TEXT',
         order: newOrder,
         isRequired: question.isRequired !== false,
-        displayInTable: question.displayInTable || false,
+        isVisibleInResults: question.displayInTable || false,
         templateId,
         options: {
           create: (question.options || []).map(option => ({
