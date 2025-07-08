@@ -1,5 +1,16 @@
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import {
+  HomeOutlined,
+  FormOutlined,
+  UserOutlined,
+  DashboardOutlined,
+  LoginOutlined,
+  LogoutOutlined,
+  GlobalOutlined
+} from '@ant-design/icons';
+import { Dropdown, Button, Space, Menu } from 'antd';
 import AdminPanel from './pages/AdminPanel';
 import CreateTemplateForm from './pages/CreateTemplateForm';
 import FormCreatePage from './pages/FormCreatePage';
@@ -12,42 +23,54 @@ import TemplatesPage from './pages/TemplatesPage';
 import UserFormsPage from './pages/UserFormsPage';
 import UserPage from './pages/UserPage';
 import { AuthContext } from './AuthContext';
-import { HomeOutlined, FormOutlined, UserOutlined, DashboardOutlined, LoginOutlined, LogoutOutlined } from '@ant-design/icons';
 import './App.css';
 
 function App() {
+  const { t, i18n } = useTranslation();
   const { token, user, logout } = useContext(AuthContext);
   const location = useLocation();
 
   const hasRole = (role) => user?.role === role;
   const isAdmin = hasRole('ADMIN');
 
-  // Определяем активный путь для подсветки навигации
-  const activePath = location.pathname;
-
   // Пропускаем навигацию на страницах аутентификации
-  const showNavigation = !['/login', '/register'].includes(activePath);
+  const showNavigation = !['/login', '/register'].includes(location.pathname);
+
+  // Смена языка
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+  };
+
+  // Меню выбора языка
+  const languageMenu = (
+    <Menu
+      items={[
+        { key: 'en', label: 'English', onClick: () => changeLanguage('en') },
+        { key: 'ru', label: 'Русский', onClick: () => changeLanguage('ru') },
+      ]}
+    />
+  );
 
   return (
     <div className="app-container">
       {/* Шапка приложения */}
       {showNavigation && (
         <header className="app-header">
-          <div className="flex-between">
+          <div className="header-content">
             <Link to="/" className="app-logo">
               <FormOutlined />
               <span>FormBuilder</span>
             </Link>
 
             <nav className="nav-menu">
-              <ul className="nav-menu">
+              <ul className="nav-items">
                 <li className="nav-item">
                   <Link
                     to="/"
-                    className={`nav-link ${activePath === '/' ? 'active' : ''}`}
+                    className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
                   >
                     <HomeOutlined />
-                    <span>Home</span>
+                    <span>{t('header.home')}</span>
                   </Link>
                 </li>
 
@@ -56,30 +79,20 @@ function App() {
                     <li className="nav-item">
                       <Link
                         to="/templates"
-                        className={`nav-link ${activePath.startsWith('/templates') ? 'active' : ''}`}
+                        className={`nav-link ${location.pathname.startsWith('/templates') ? 'active' : ''}`}
                       >
                         <FormOutlined />
-                        <span>My Templates</span>
+                        <span>{t('header.templates')}</span>
                       </Link>
                     </li>
 
                     <li className="nav-item">
                       <Link
                         to="/my-forms"
-                        className={`nav-link ${activePath.startsWith('/my-forms') ? 'active' : ''}`}
+                        className={`nav-link ${location.pathname.startsWith('/my-forms') ? 'active' : ''}`}
                       >
                         <FormOutlined />
-                        <span>My Forms</span>
-                      </Link>
-                    </li>
-
-                    <li className="nav-item">
-                      <Link
-                        to="/user"
-                        className={`nav-link ${activePath.startsWith('/user') ? 'active' : ''}`}
-                      >
-                        <UserOutlined />
-                        <span>Profile</span>
+                        <span>{t('header.myForms')}</span>
                       </Link>
                     </li>
 
@@ -87,10 +100,10 @@ function App() {
                       <li className="nav-item">
                         <Link
                           to="/admin"
-                          className={`nav-link ${activePath.startsWith('/admin') ? 'active' : ''}`}
+                          className={`nav-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
                         >
                           <DashboardOutlined />
-                          <span>Admin</span>
+                          <span>{t('header.admin')}</span>
                         </Link>
                       </li>
                     )}
@@ -99,24 +112,33 @@ function App() {
               </ul>
             </nav>
 
-            <div className="auth-section">
+            <div className="header-actions">
+              <Dropdown overlay={languageMenu} placement="bottomRight">
+                <Button type="text" icon={<GlobalOutlined />} />
+              </Dropdown>
+
               {token ? (
-                <div className="user-info">
-                  <span className="user-greeting">
-                    Hello, <strong>{user?.name || user?.email}</strong>
-                  </span>
-                  <button
-                    className="btn btn-outline"
-                    onClick={logout}
+                <Space className="user-section">
+                  <Link
+                    to="/user"
+                    className={`user-profile ${location.pathname.startsWith('/user') ? 'active' : ''}`}
                   >
-                    <LogoutOutlined />
-                    <span>Logout</span>
-                  </button>
-                </div>
+                    <UserOutlined />
+                    <span>{user?.name || user?.email}</span>
+                  </Link>
+                  <Button
+                    type="text"
+                    icon={<LogoutOutlined />}
+                    onClick={logout}
+                    className="logout-btn"
+                  >
+                    {t('header.logout')}
+                  </Button>
+                </Space>
               ) : (
-                <Link to="/login" className="btn btn-primary">
+                <Link to="/login" className="login-btn">
                   <LoginOutlined />
-                  <span>Login</span>
+                  <span>{t('header.login')}</span>
                 </Link>
               )}
             </div>
@@ -126,57 +148,47 @@ function App() {
 
       {/* Основное содержимое */}
       <main className="app-main">
-        <div className="app-content">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route
-              path="/login"
-              element={token ? <Navigate to="/" replace /> : <LoginPage />}
-            />
-            <Route
-              path="/register"
-              element={token ? <Navigate to="/" replace /> : <RegisterPage />}
-            />
-            <Route
-              path="/templates"
-              element={token ? <TemplatesPage /> : <Navigate to="/login" replace />}
-            />
-            <Route
-              path="/templates/create"
-              element={token ? <CreateTemplateForm /> : <Navigate to="/login" replace />}
-            />
-            <Route path="/templates/:id" element={<TemplatePage />} />
-            <Route path="/forms/create/:id" element={<FormCreatePage />} />
-            <Route path="/forms/:id" element={<FormPage />} />
-            <Route path="/user" element={token ? <UserPage /> : <Navigate to="/login" replace />} />
-            <Route path="/my-forms" element={token ? <UserFormsPage /> : <Navigate to="/login" replace />} />
-            <Route
-              path="/admin"
-              element={
-                token && isAdmin ? (
-                  <AdminPanel />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              }
-            />
-
-            {/* Резервный маршрут */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/login"
+            element={token ? <Navigate to="/" replace /> : <LoginPage />}
+          />
+          <Route
+            path="/register"
+            element={token ? <Navigate to="/" replace /> : <RegisterPage />}
+          />
+          <Route
+            path="/templates"
+            element={token ? <TemplatesPage /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/templates/create"
+            element={token ? <CreateTemplateForm /> : <Navigate to="/login" replace />}
+          />
+          <Route path="/templates/:id" element={<TemplatePage />} />
+          <Route path="/forms/create/:id" element={<FormCreatePage />} />
+          <Route path="/forms/:id" element={<FormPage />} />
+          <Route path="/user" element={token ? <UserPage /> : <Navigate to="/login" replace />} />
+          <Route path="/my-forms" element={token ? <UserFormsPage /> : <Navigate to="/login" replace />} />
+          <Route
+            path="/admin"
+            element={
+              token && isAdmin ? <AdminPanel /> : <Navigate to="/login" replace />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* Подвал приложения */}
       {showNavigation && (
         <footer className="app-footer">
-          <div className="container">
-            <p>FormBuilder © {new Date().getFullYear()} - Create and share forms easily</p>
+          <div className="footer-content">
+            <p>© {new Date().getFullYear()} FormBuilder. {t('footer.rights')}</p>
             <div className="footer-links">
-              <Link to="/">Home</Link>
-              <Link to="/templates">Templates</Link>
-              <Link to="/privacy">Privacy Policy</Link>
-              <Link to="/terms">Terms of Service</Link>
+              <Link to="/privacy">{t('footer.privacy')}</Link>
+              <Link to="/terms">{t('footer.terms')}</Link>
             </div>
           </div>
         </footer>

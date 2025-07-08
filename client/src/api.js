@@ -83,8 +83,11 @@ export const templatesApi = {
       method: 'POST',
       body: { question }
     }),
-  getPopularTemplates: (limit = 5) =>
-    request(`/templates/public?limit=${limit}&sort=popular`)
+  getPopularTemplates: (limit = 5) => {
+    const params = { limit, sort: 'popular' };
+    const query = new URLSearchParams(params).toString();
+    return request(`/templates/public?${query}`);
+  }
 };
 
 // Forms API
@@ -136,7 +139,7 @@ export const likesApi = {
 export const analyticsApi = {
   getTemplateAnalytics: (templateId) => request(`/analytics/template/${templateId}`),
   getUserAnalytics: (userId) => request(`/analytics/user/${userId}`),
-  getPlatformAnalytics: () => request('/analytics/platform')
+  getPlatformStats: () => request('/analytics/platform')
 };
 
 // Admin API

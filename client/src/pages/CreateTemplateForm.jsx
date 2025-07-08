@@ -85,8 +85,6 @@ export default function CreateTemplateForm() {
   const handleImageUpload = async (file) => {
     setImageLoading(true);
     try {
-      // В реальном приложении здесь будет загрузка в облачное хранилище
-      // Для примера просто возвращаем URL
       const url = URL.createObjectURL(file);
       setImageUrl(url);
       message.success(t('template.imageUploadSuccess'));
@@ -95,7 +93,7 @@ export default function CreateTemplateForm() {
     } finally {
       setImageLoading(false);
     }
-    return false; // Prevent default upload
+    return false;
   };
 
   const onFinish = async (values) => {

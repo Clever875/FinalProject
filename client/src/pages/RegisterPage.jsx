@@ -37,11 +37,20 @@ export default function RegisterPage() {
   const onSubmit = async (values) => {
     try {
       setLoading(true);
-      await register(values.name, values.email, values.password);
+      // Исправлено: передача объекта вместо отдельных параметров
+      await register({
+        name: values.name,
+        email: values.email,
+        password: values.password
+      });
       message.success(t('register.successMessage'));
       navigate('/templates');
     } catch (error) {
-      message.error(error.message || t('register.errorMessage'));
+      // Улучшенная обработка ошибок
+      const errorMessage = error.response?.data?.error ||
+                          error.message ||
+                          t('register.errorMessage');
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -64,6 +73,7 @@ export default function RegisterPage() {
           onFinish={onSubmit}
           layout="vertical"
           className="auth-form"
+          validateTrigger="onBlur"
         >
           <Form.Item
             name="name"
@@ -73,7 +83,7 @@ export default function RegisterPage() {
                 message: t('register.nameRequired')
               },
               {
-                min: 3,
+                min: 2,
                 message: t('register.nameLength')
               }
             ]}
@@ -83,6 +93,7 @@ export default function RegisterPage() {
               placeholder={t('register.namePlaceholder')}
               size="large"
               className="auth-input"
+              autoComplete="name"
             />
           </Form.Item>
 
@@ -104,6 +115,7 @@ export default function RegisterPage() {
               placeholder={t('register.emailPlaceholder')}
               size="large"
               className="auth-input"
+              autoComplete="email"
             />
           </Form.Item>
 
@@ -123,6 +135,7 @@ export default function RegisterPage() {
                 message: t('register.passwordComplexity')
               }
             ]}
+            hasFeedback
           >
             <Input.Password
               prefix={<LockOutlined />}
@@ -133,6 +146,7 @@ export default function RegisterPage() {
                 visible: passwordVisible,
                 onVisibleChange: setPasswordVisible
               }}
+              autoComplete="new-password"
             />
           </Form.Item>
 
@@ -153,12 +167,14 @@ export default function RegisterPage() {
                 },
               }),
             ]}
+            hasFeedback
           >
             <Input.Password
               prefix={<LockOutlined />}
               placeholder={t('register.confirmPlaceholder')}
               size="large"
               className="auth-input"
+              autoComplete="new-password"
             />
           </Form.Item>
 
@@ -183,16 +199,19 @@ export default function RegisterPage() {
             icon={<GoogleOutlined />}
             onClick={() => handleSocialRegister('google')}
             className="social-button google"
+            aria-label="Google"
           />
           <Button
             icon={<FacebookFilled />}
             onClick={() => handleSocialRegister('facebook')}
             className="social-button facebook"
+            aria-label="Facebook"
           />
           <Button
             icon={<GithubOutlined />}
             onClick={() => handleSocialRegister('github')}
             className="social-button github"
+            aria-label="GitHub"
           />
         </Space>
 

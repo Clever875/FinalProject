@@ -1,14 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-
-/* Базовые сбросы и глобальные стили */
-*,
-*::before,
-*::after {
+body, h1, h2, h3, h4, h5, h6,
+p, ul, ol, dl, dd, figure,
+blockquote, fieldset, legend {
+  margin: 0;
+  padding: 0;
+}
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
-
+ul, ol {
+  padding-left: var(--space-lg);
+}
+:root {
+  /* Добавить spacing систему */
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+}
 html {
   scroll-behavior: smooth;
   height: 100%;

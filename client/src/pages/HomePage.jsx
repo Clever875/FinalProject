@@ -46,20 +46,33 @@ export default function HomePage() {
         setLoading(true);
         setError(null);
 
-        const [latest, popular, tagsData, statsData] = await Promise.all([
-          templatesApi.getPublicTemplatesPaginated(1, 6, '', 'newest'),
+        const responses = await Promise.allSettled([
+          templatesApi.getPublicTemplates({ page: 1, limit: 6, search: '', sort: 'newest' }),
           templatesApi.getPopularTemplates(5),
           tagsApi.getPopularTags(20),
           analyticsApi.getPlatformStats()
         ]);
 
-        setLatestTemplates(latest.templates || []);
-        setPopularTemplates(popular || []);
-        setTags(tagsData || []);
-        setStats(statsData || {});
+        // Обработка каждого ответа
+        const [latestResponse, popularResponse, tagsResponse, statsResponse] = responses.map(r =>
+          r.status === 'fulfilled' ? r.value : null
+        );
+
+        // Проверяем наличие критических ошибок
+        const hasCriticalError = !latestResponse || !popularResponse;
+
+        if (hasCriticalError) {
+          throw new Error('Some requests failed');
+        }
+
+        // Устанавливаем данные (даже если часть запросов не удалась)
+        setLatestTemplates(latestResponse?.data || []);
+        setPopularTemplates(popularResponse || []);
+        setTags(tagsResponse || []);
+        setStats(statsResponse || {});
       } catch (err) {
         console.error('Ошибка загрузки данных:', err);
-        setError(t('home.partialLoadError'));
+        setError(t('home.loadError'));
       } finally {
         setLoading(false);
       }
@@ -107,7 +120,7 @@ export default function HomePage() {
             <Space size={4} wrap className="template-tags">
               <Tag className="topic-tag">{template.topic || t('home.other')}</Tag>
               <Badge
-                count={template.likesCount || 0}
+                count={template._count?.likes || 0}
                 className="like-badge"
               >
                 <StarFilled className="star-icon" />
@@ -115,7 +128,7 @@ export default function HomePage() {
             </Space>
             <div className="template-author">
               <Text type="secondary">
-                {t('home.createdBy')}: {template.author?.username || t('home.anonymous')}
+                {t('home.createdBy')}: {template.owner?.name || t('home.anonymous')}
               </Text>
             </div>
           </div>
@@ -142,12 +155,12 @@ export default function HomePage() {
       <div className="popular-template-stats">
         <Space>
           <Badge
-            count={item.formsCount || 0}
+            count={item._count?.forms || 0}
             className="form-count-badge"
             title={t('home.filledForms')}
           />
           <Badge
-            count={item.likesCount || 0}
+            count={item._count?.likes || 0}
             className="like-count-badge"
             title={t('home.likes')}
           >

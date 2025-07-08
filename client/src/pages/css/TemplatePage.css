@@ -1,25 +1,28 @@
 .template-page {
-  padding: 24px;
+  padding: var(--space-lg);
   max-width: 1400px;
   margin: 0 auto;
 }
 
 .template-header-card {
-  border-radius: 12px;
+  border-radius: var(--border-radius);
   overflow: hidden;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
 }
 
 .template-image-col {
   display: flex;
   justify-content: center;
+  padding: var(--space-md);
 }
 
 .template-image {
   width: 100%;
   max-height: 300px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
 }
 
 .template-image-placeholder {
@@ -28,97 +31,155 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f2f5;
-  border-radius: 8px;
-  font-size: 64px;
-  color: #bfbfbf;
-}
-
-.dark .template-image-placeholder {
-  background: #141414;
+  background: var(--light-gray);
+  border-radius: var(--border-radius);
+  font-size: 3rem;
+  color: var(--medium-gray);
 }
 
 .template-header {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-md);
+  padding: 0 var(--space-md);
 }
 
 .template-title {
-  margin-bottom: 8px !important;
+  margin-bottom: var(--space-xs) !important;
+  font-weight: 600;
 }
 
 .template-meta {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-xs);
+  display: flex;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
 }
 
 .template-description {
-  margin-bottom: 16px;
-  font-size: 16px;
+  margin-bottom: var(--space-md);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-color);
 }
 
 .template-author {
   display: flex;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
+  gap: var(--space-xs);
 }
 
 .author-icon {
-  margin-right: 8px;
-  font-size: 18px;
-  color: #1890ff;
+  color: var(--primary-color);
+  font-size: 1.2rem;
 }
 
 .template-stats {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
+  padding: 0 var(--space-md);
 }
 
 .template-actions {
-  margin-top: 16px;
+  margin-top: var(--space-md);
+  padding: 0 var(--space-md);
 }
 
 .template-tabs {
-  margin-top: 16px;
+  margin-top: var(--space-md);
 }
 
-.info-card, .questions-card, .responses-card, .analytics-card {
-  border-radius: 12px;
-  margin-bottom: 24px;
+.template-tabs .ant-tabs-tab {
+  font-size: 1rem;
+  padding: var(--space-sm) var(--space-md);
+}
+
+.info-card,
+.questions-card,
+.responses-card,
+.analytics-card {
+  border-radius: var(--border-radius);
+  margin-bottom: var(--space-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
 }
 
 .section-title {
-  margin-bottom: 16px !important;
+  margin-bottom: var(--space-md) !important;
+  font-weight: 500;
 }
 
 .tags-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
 }
 
 .tags-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-xs);
 }
 
 .template-tag {
-  font-size: 14px;
-  padding: 4px 12px;
+  font-size: 0.875rem;
+  padding: var(--space-xxs) var(--space-sm);
   border-radius: 20px;
+  background: var(--light-gray);
+  color: var(--text-color);
 }
 
 .allowed-users {
-  margin-top: 12px;
+  margin-top: var(--space-sm);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-xs);
 }
 
 .user-tag {
-  background: #e6f7ff;
-  border-color: #91d5ff;
-  color: #1890ff;
+  background: var(--light-gray);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
   border-radius: 20px;
+  padding: var(--space-xxs) var(--space-sm);
+  font-size: 0.875rem;
 }
 
-.dark .user-tag {
-  background: #111b26;
-  border-color: #153450;
+/* Темная тема */
+[data-theme="dark"] {
+  .template-image-placeholder {
+    background: var(--card-bg);
+    color: var(--dark-gray);
+  }
+
+  .template-tag {
+    background: var(--background);
+    border-color: var(--border-color);
+  }
+
+  .user-tag {
+    background: var(--background);
+    border-color: var(--border-color);
+  }
+}
+
+@media (max-width: 768px) {
+  .template-page {
+    padding: var(--space-md);
+  }
+
+  .template-image-col {
+    padding: var(--space-sm);
+  }
+
+  .template-header,
+  .template-stats,
+  .template-actions {
+    padding: 0 var(--space-sm);
+  }
+
+  .template-image {
+    max-height: 200px;
+  }
+
+  .template-image-placeholder {
+    height: 200px;
+    font-size: 2rem;
+  }
 }

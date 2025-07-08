@@ -1,106 +1,108 @@
-// src/AuthContext.js
+// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import { jwtDecode } from 'jwt-decode'; // Правильный импорт именованного экспорта
+import { jwtDecode } from 'jwt-decode';
+import PropTypes from 'prop-types';
 import { authApi } from './api';
 
-export const AuthContext = createContext(); // Экспорт контекста
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Функция для входа пользователя
+  const handleAuthSuccess = useCallback((response) => {
+    const { token } = response;
+    localStorage.setItem('token', token);
+    setToken(token);
+    const decoded = jwtDecode(token);
+    setUser(decoded);
+    return response;
+  }, []);
+
   const login = async (credentials) => {
     try {
       setLoading(true);
       setError(null);
-
       const response = await authApi.login(credentials);
-      localStorage.setItem('token', response.token);
-      setToken(response.token);
-
-      const decoded = jwtDecode(response.token); // Исправленное использование
-      setUser(decoded);
-
-      return response;
+      return handleAuthSuccess(response);
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed');
+      setError(err.response?.data?.error || err.message || 'Login failed');
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Функция для регистрации пользователя
   const register = async (userData) => {
     try {
       setLoading(true);
       setError(null);
-
       const response = await authApi.register(userData);
-      return response;
+      const loginResponse = await authApi.login({
+        email: userData.email,
+        password: userData.password
+      });
+      return handleAuthSuccess(loginResponse);
     } catch (err) {
       console.error('Registration error:', err);
-      setError(err.message || 'Registration failed');
+      setError(err.response?.data?.error || err.message || 'Registration failed');
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Функция для выхода пользователя
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
-    authApi.logout();
+    authApi.logout().catch(err => console.error('Logout error:', err));
   }, []);
 
-  // Функция для обновления профиля пользователя
   const updateProfile = async (data) => {
     try {
       setLoading(true);
       setError(null);
-
       const response = await authApi.updateProfile(data);
-      const decoded = jwtDecode(response.token); // Исправлено
-      setUser(decoded);
-      setToken(response.token);
-      localStorage.setItem('token', response.token);
-
-      return response;
+      return handleAuthSuccess(response);
     } catch (err) {
       console.error('Profile update error:', err);
-      setError(err.message || 'Profile update failed');
+      setError(err.response?.data?.error || err.message || 'Profile update failed');
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Проверка аутентификации при загрузке приложения
+  const refreshToken = useCallback(async () => {
+    try {
+      if (!token) return;
+      const response = await authApi.refreshToken(token);
+      handleAuthSuccess(response);
+      return response;
+    } catch (err) {
+      console.error('Token refresh error:', err);
+      logout();
+      throw err;
+    }
+  }, [token, handleAuthSuccess, logout]);
+
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        if (token) {
-          const decoded = jwtDecode(token); // Исправлено
-
-          // Проверка срока действия токена
-          const currentTime = Date.now() / 1000;
-          if (decoded.exp < currentTime) {
-            // Попытка обновить токен
-            const response = await authApi.refreshToken(token);
-            localStorage.setItem('token', response.token);
-            setToken(response.token);
-
-            const newDecoded = jwtDecode(response.token); // Исправлено
-            setUser(newDecoded);
-          } else {
-            setUser(decoded);
-          }
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+        const decoded = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+        if (decoded.exp < currentTime) {
+          await refreshToken();
+        } else {
+          setUser(decoded);
         }
       } catch (err) {
         console.error('Token verification error:', err);
@@ -109,19 +111,11 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     };
-
     verifyToken();
+  }, [token, refreshToken, logout]);
 
-    // Очистка при размонтировании
-    return () => {
-      setLoading(false);
-    };
-  }, [token, logout]);
-
-  // Проверка ролей пользователя
-  const hasRole = (role) => {
-    return user?.role === role;
-  };
+  const hasRole = (role) => user?.role === role;
+  const hasPermission = (permission) => user?.permissions?.includes(permission);
 
   const contextValue = {
     token,
@@ -132,7 +126,9 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
+    refreshToken,
     hasRole,
+    hasPermission,
     isAuthenticated: !!token
   };
 
@@ -141,6 +137,10 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 export const useAuth = () => {

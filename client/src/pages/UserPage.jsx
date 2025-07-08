@@ -7,7 +7,6 @@ import {
   Space,
   Button,
   Typography,
-  Skeleton,
   Empty,
   Popconfirm,
   message,
@@ -142,7 +141,7 @@ export default function UserPage() {
       title: t('templates.table.questions'),
       dataIndex: 'questions',
       key: 'questions',
-      render: (questions) => questions.length,
+      render: (questions) => questions?.length || 0,
     },
     {
       title: t('templates.table.forms'),
@@ -288,16 +287,16 @@ export default function UserPage() {
             <div className="profile-section">
               <Descriptions bordered column={1} className="profile-details">
                 <Descriptions.Item label={t('profile.name')}>
-                  {user?.name}
+                  {user?.name || '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label={t('profile.email')}>
-                  {user?.email}
+                  {user?.email || '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label={t('profile.registrationDate')}>
-                  {moment(user?.createdAt).format('LLL')}
+                  {user?.createdAt ? moment(user.createdAt).format('LLL') : '-'}
                 </Descriptions.Item>
                 <Descriptions.Item label={t('profile.lastActive')}>
-                  {moment(user?.lastActive).fromNow()}
+                  {user?.lastActive ? moment(user.lastActive).fromNow() : '-'}
                 </Descriptions.Item>
               </Descriptions>
 
@@ -345,7 +344,9 @@ export default function UserPage() {
                 <Title level={4} type="danger">
                   {t('profile.dangerZone')}
                 </Title>
-
+                <Text className="danger-zone-description">
+                  {t('profile.dangerZoneWarning')}
+                </Text>
                 <Popconfirm
                   title={t('profile.deleteAccountConfirm')}
                   onConfirm={handleDeleteAccount}
@@ -357,6 +358,7 @@ export default function UserPage() {
                     danger
                     icon={<DeleteOutlined />}
                     loading={profileLoading}
+                    className="delete-account-btn"
                   >
                     {t('profile.deleteAccount')}
                   </Button>
