@@ -1,3 +1,4 @@
+import api from './api';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const handleResponseError = async (response) => {
@@ -14,7 +15,6 @@ const handleResponseError = async (response) => {
   } catch (e) {
     console.error('Error parsing error response:', e);
   }
-
   throw new Error(errorMessage);
 };
 
@@ -60,17 +60,27 @@ export const authApi = {
   deleteProfile: () => request('/auth/profile', { method: 'DELETE' })
 };
 
+
+export const getUserTemplatesPaginated = async (params) => {
+  try {
+    const response = await api.get('/templates/user', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getPublicTemplatesPaginated = async (params) => {
+  try {
+    const response = await api.get('/templates/public', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
 // Templates API
 export const templatesApi = {
   createTemplate: (templateData) => request('/templates', { method: 'POST', body: templateData }),
-  getPublicTemplates: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/templates/public?${query}`);
-  },
-  getUserTemplates: (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    return request(`/templates/user?${query}`);
-  },
   getTemplateById: (id) => request(`/templates/${id}`),
   updateTemplate: (id, templateData) => request(`/templates/${id}`, { method: 'PUT', body: templateData }),
   deleteTemplate: (id) => request(`/templates/${id}`, { method: 'DELETE' }),

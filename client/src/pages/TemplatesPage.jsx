@@ -1,5 +1,9 @@
-import { UserOutlined } from '@ant-design/icons';
-import React, { useState, useEffect, useContext } from 'react';
+import { UserOutlined, PlusOutlined, SearchOutlined, FormOutlined } from '@ant-design/icons';
+import { useAuth } from '../AuthContext';
+import TemplateCard from '../components/TemplateCard';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from "jwt-decode";
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Row,
@@ -8,23 +12,12 @@ import {
   Skeleton,
   Typography,
   Tabs,
-  Tag,
   Input,
   Space,
   Empty,
-  Pagination,
-  Spin
+  Pagination
 } from 'antd';
-import {
-  PlusOutlined,
-  SearchOutlined,
-  StarFilled,
-  FormOutlined
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import { templatesApi } from '../api';
-import { AuthContext } from '../AuthContext';
-import TemplateCard from '../components/TemplateCard';
+import api, { templatesApi } from '../api';
 import { useTheme } from '../context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import './css/TemplatesPage.css';
@@ -33,32 +26,50 @@ const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 export default function TemplatesPage() {
+  const {
+    token,
+    user,
+    loading,
+    error,
+    handleRefreshToken,
+    refreshToken
+  } = useAuth();
+
   const { t } = useTranslation();
   const { darkMode } = useTheme();
-  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [myTemplates, setMyTemplates] = useState([]);
   const [publicTemplates, setPublicTemplates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [localLoading, setLocalLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('my');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [totalTemplates, setTotalTemplates] = useState(0);
-  const [error, setError] = useState(null);
+  const [localError, setLocalError] = useState(null);
 
   useEffect(() => {
-    const fetchTemplates = async () => {
+    const fetchData = async () => {
+      if (!token) return;
+
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+
+      if (decoded.exp < currentTime) {
+        const refreshTokenValue = localStorage.getItem("refreshToken");
+        await handleRefreshToken(refreshTokenValue);
+      }
+
       try {
-        setLoading(true);
-        setError(null);
+        setLocalLoading(true);
+        setLocalError(null);
 
         const isMyTab = activeTab === 'my';
         const params = {
           page: currentPage,
           limit: pageSize,
-          search: search.trim() || undefined
+          search: search.trim() || undefined,
         };
 
         let response;
@@ -73,17 +84,18 @@ export default function TemplatesPage() {
         } else {
           setPublicTemplates(response.templates);
         }
+
         setTotalTemplates(response.total);
       } catch (err) {
         console.error('Ошибка загрузки шаблонов:', err);
-        setError(t('templates.loadError'));
+        setLocalError(t('templates.loadError'));
       } finally {
-        setLoading(false);
+        setLocalLoading(false);
       }
     };
 
-    fetchTemplates();
-  }, [activeTab, currentPage, pageSize, search, user, t]);
+    fetchData();
+  }, [activeTab, currentPage, pageSize, search, token, user, t, handleRefreshToken]);
 
   const handleTabChange = (key) => {
     setActiveTab(key);
@@ -96,7 +108,7 @@ export default function TemplatesPage() {
   };
 
   const renderTemplates = (templates) => {
-    if (loading) {
+    if (localLoading) {
       return (
         <Row gutter={[16, 16]}>
           {[...Array(pageSize)].map((_, i) => (
@@ -110,10 +122,10 @@ export default function TemplatesPage() {
       );
     }
 
-    if (error) {
+    if (localError) {
       return (
         <Card className="error-card">
-          <Text type="danger">{error}</Text>
+          <Text type="danger">{localError}</Text>
           <Button onClick={() => window.location.reload()} className="reload-button">
             {t('templates.reload')}
           </Button>
